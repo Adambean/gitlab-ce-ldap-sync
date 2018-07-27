@@ -1,0 +1,20 @@
+{
+    "name": "adam-reece/gitlab-ce-ldap-group-sync",
+    "type": "project",
+    "license": "Apache-2.0",
+    "require": {
+        "php": "^7.0.0",
+        "monolog/monolog": "^1.23",
+        "symfony/console": "^3.4",
+        "symfony/ldap": "^3.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "AdamReece\\GitlabCeLdapGroupSync\\": "src"
+        },
+        "classmap": ["src"]
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
