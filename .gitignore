@@ -1,0 +1,6 @@
+/var/logs/
+!/var/logs/.gitkeep
+/vendor/
+
+/*.sublime-workspace
+composer.phar
