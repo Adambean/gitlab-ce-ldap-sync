@@ -1,0 +1,46 @@
+# If you don't know what you're doing check "README.md" for more details before
+# filing a request for help.
+
+ldap:
+    debug: false
+
+    server:
+        host:                           ~
+        port:                           ~
+        version:                        3
+        encryption:                     ~
+
+        bindDn:                         ~
+        bindPassword:                   ~
+
+    queries:
+        baseDn:                         ~
+
+        usersDn:                        ~
+        usersFilter:                    "(objectClass=inetOrgPerson)"
+        usersUniqueAttribute:           "uid"
+
+        groupDn:                        ~
+        groupFilter:                    "(objectClass=groupOfUniqueNames)"
+        groupUniqueAttribute:           "cn"
+        groupMemberAttribute:           "memberUid"
+
+gitlab:
+    debug: false
+
+    options:
+        createEmptyGroups:              false
+        deleteExtraGroups:              false
+
+        groupNamesOfAdministrators:     ~
+
+        groupNamesOfExternal:           ~
+
+        groupNamesToIgnore:
+            - "Root"
+            - "Users"
+
+    instances:
+        example:
+            url:    ~
+            token:  ~
