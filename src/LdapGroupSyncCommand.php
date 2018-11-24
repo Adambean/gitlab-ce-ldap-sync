@@ -15,11 +15,8 @@ use Cocur\Slugify\Slugify;
 
 class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
 {
-    private $logger             = null;
-    private $dryRun             = false;
-
-    private $slugifyGitlabName  = null;
-    private $slugifyGitlabPath  = null;
+    private $logger = null;
+    private $dryRun = false;
 
     /**
      * Configures the current command.
@@ -50,20 +47,6 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
         if ($this->dryRun = boolval($input->getOption("dryrun", false))) {
             $this->logger->warning("Dry run enabled: No changes will be persisted.");
         }
-
-        $this->slugifyGitlabName = new Slugify([
-            "regexp"        => "/([^A-Za-z0-9]|-_\. )+/",
-            "separator"     => " ",
-            "lowercase"     => false,
-            "trim"          => true,
-        ]);
-
-        $this->slugifyGitlabPath = new Slugify([
-            "regexp"        => "/([^A-Za-z0-9]|-_\.)+/",
-            "separator"     => "-",
-            "lowercase"     => true,
-            "trim"          => true,
-        ]);
 
 
 
@@ -763,6 +746,20 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
      */
     private function deployGitlabGroupsAndUsers(array $config, string $gitlabInstance, array $gitlabConfig, array $ldapGroups, int $ldapGroupsNum, array $ldapUsers, int $ldapUsersNum): void
     {
+        $slugifyGitlabName = new Slugify([
+            "regexp"        => "/([^A-Za-z0-9]|-_\. )+/",
+            "separator"     => " ",
+            "lowercase"     => false,
+            "trim"          => true,
+        ]);
+
+        $slugifyGitlabPath = new Slugify([
+            "regexp"        => "/([^A-Za-z0-9]|-_\.)+/",
+            "separator"     => "-",
+            "lowercase"     => true,
+            "trim"          => true,
+        ]);
+
         // Connect
         $this->logger->notice("Establishing Gitlab connection.", [
             "instance"  => $gitlabInstance,
@@ -842,8 +839,8 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
                     continue;
                 }
 
-                $gitlabGroupName = $this->slugifyGitlabName->slugify($ldapGroupName);
-                $gitlabGroupPath = $this->slugifyGitlabPath->slugify($ldapGroupName);
+                $gitlabGroupName = $slugifyGitlabName->slugify($ldapGroupName);
+                $gitlabGroupPath = $slugifyGitlabPath->slugify($ldapGroupName);
 
                 if (!in_array($gitlabGroupName, $groupsSync["found"])) {
                     $this->logger->info(sprintf("Directory group \"%s\" is not in Gitlab.", $ldapGroupName));
@@ -872,7 +869,7 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
                     continue;
                 }
 
-                $gitlabGroupPath = $this->slugifyGitlabPath->slugify($gitlabGroupName);
+                $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
 
                 if (!in_array($gitlabGroupName, $ldapGroups)) {
                     $this->logger->info(sprintf("Gitlab group \"%s\" is not in directory.", $gitlabGroupName));
@@ -903,7 +900,7 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
                     continue;
                 }
 
-                $gitlabGroupPath = $this->slugifyGitlabPath->slugify($gitlabGroupName);
+                $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
 
                 $usersSync = [
                     "found"     => [],
