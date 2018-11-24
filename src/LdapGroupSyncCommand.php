@@ -118,7 +118,13 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
         // Deploy to Gitlab instances
         $this->logger->notice("Deploying groups and users to Gitlab instances.");
 
+        $gitlabInstanceOnly = trim($input->getArgument("instance", null));
         foreach ($config["gitlab"]["instances"] as $gitlabInstance => $gitlabConfig) {
+            if ($gitlabInstanceOnly && $gitlabInstance !== $gitlabInstanceOnly) {
+                $this->logger->debug(sprintf("Skipping instance \"%s\", doesn't match the argument specified.", $gitlabInstance));
+                continue;
+            }
+
             try {
                 $this->deployGitlabGroupsAndUsers($config, $gitlabInstance, $gitlabConfig, $ldapGroups, $ldapGroupsNum, $ldapUsers, $ldapUsersNum);
             } catch (\Exception $e) {
