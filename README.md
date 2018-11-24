@@ -96,7 +96,7 @@ Specify the base distinguished name to work with. This will also be appended to 
 Example to work with entire domain name: "dc=example,dc=com"
 Example to work with a specific organisational unit tree: "ou=Internal,dc=example,dc=com"
 
-##### usersDn *(string|null)*
+##### userDn *(string|null)*
 
 Specify the distinguished name containing user objects to be searched for.
 
@@ -107,7 +107,7 @@ Leaving this null will search the entire base DN.
 
 Default: *null*
 
-##### usersFilter *(string|null)*
+##### userFilter *(string|null)*
 
 Specify a search filter for finding user objects within the above DN.
 
@@ -116,11 +116,23 @@ Specify a search filter for finding user objects within the above DN.
 
 Default: "(objectClass=inetOrgPerson)"
 
-##### usersUniqueAttribute *(string|null)*
+##### userUniqueAttribute *(string|null)*
 
 Specify the attribute used to uniquely identify a user by their user name. Their values must be a simple name of which the user would typically type to login to Gitlab or any other application interfacing with the same directory.
 
 Default: "uid"
+
+##### userNameAttribute *(string|null)*
+
+Specify the attribute used for the user's full real name.
+
+Default: "cn"
+
+##### userEmailAttribute *(string|null)*
+
+Specify the attribute used for the user's email address. (If there are multiple values only the first will be used.)
+
+Default: "mail"
 
 ##### groupDn *(string|null)*
 
@@ -243,6 +255,26 @@ Group name "Root" and "Users" must always be ignored because they are reserved k
 
 Default: *null*
 
+#### instances *(array)*
+
+Declare one or more Gitlab instances to sync with. Each array key represents the instance name, which can be used later on to only sync with a particular instance (out of multiple) when running this tool.
+
+##### your-instance-name-here *(array)*
+
+Make up an instance name. For example if you had multiple Gitlab installations on servers named "Athena" and "Demeter" it would be sensible to tag them as "athena" and "demeter" in your configuration. All sub-sections of this configuration will be repeated for each instance.
+
+###### url *(string)*
+
+Specify the full HTTP/HTTPS URL to this Gitlab instance, e.g. "https://athena.gitlab.example.com". This is the same URL you use to really visit this Gitlab installation from your web browser.
+
+###### token *(string)*
+
+Specify an API token (usually a personal token or impersonation token) this tool can use to interface with the Gitlab instance's API. This token will need to have the "api" and "sudo" flags available.
+
+###### ldapServerName *(string)*
+
+Specify the LDAP server name used by this Gitlab instance. You can find this in the "ldap_servers" section of the "gitlab.rb" configuration file, which represents an array of data specifying how to interface with LDAP such as server host address, bind DN, encryption, base, etc.
+
 ## Running
 
 Once you've configured this tool you can run it from a CLI using:
@@ -258,6 +290,10 @@ If you'd like to see more verbose output you can add up to 3 `-v` switches, for 
     `php bin/console ldap:groups:sync -v`
     `php bin/console ldap:groups:sync -vv`
     `php bin/console ldap:groups:sync -vvv`
+
+If you'd like to only sync with a single Gitlab instance you can specify the name of it as per your configuration as an argument, for example:
+
+    `php bin/console ldap:groups:sync -d athena`
 
 ## Built With
 
