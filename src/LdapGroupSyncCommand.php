@@ -30,7 +30,6 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
         $this
             ->setName("ldap:groups:sync")
             ->setDescription("Sync LDAP groups with a Gitlab CE installation.")
-            ->setHelp('This command allows you to greet a user based on the time of the day...')
             ->addOption("dryrun", "d", InputOption::VALUE_NONE, "Dry run: Do not persist any changes.")
             ->addArgument("instance", InputArgument::OPTIONAL, "Sync with a specific instance, or leave unspecified to work with all.")
         ;
