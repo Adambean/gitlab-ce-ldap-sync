@@ -16,9 +16,11 @@ ldap:
     queries:
         baseDn:                         ~
 
-        usersDn:                        ~
-        usersFilter:                    "(objectClass=inetOrgPerson)"
-        usersUniqueAttribute:           "uid"
+        userDn:                         ~
+        userFilter:                     "(objectClass=inetOrgPerson)"
+        userUniqueAttribute:            "uid"
+        userNameAttribute:              "cn"
+        userEmailAttribute:             "mail"
 
         groupDn:                        ~
         groupFilter:                    "(objectClass=groupOfUniqueNames)"
@@ -42,5 +44,6 @@ gitlab:
 
     instances:
         example:
-            url:    ~
-            token:  ~
+            url:            ~
+            token:          ~
+            ldapServerName: ~
