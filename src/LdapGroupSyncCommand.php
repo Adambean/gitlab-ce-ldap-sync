@@ -25,8 +25,8 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
     public function configure(): void
     {
         $this
-            ->setName("ldap:groups:sync")
-            ->setDescription("Sync LDAP groups with a Gitlab CE installation.")
+            ->setName("ldap:sync")
+            ->setDescription("Sync LDAP users and groups with a Gitlab CE installation.")
             ->addOption("dryrun", "d", InputOption::VALUE_NONE, "Dry run: Do not persist any changes.")
             ->addArgument("instance", InputArgument::OPTIONAL, "Sync with a specific instance, or leave unspecified to work with all.")
         ;
@@ -41,7 +41,7 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
     public function execute(InputInterface $input, OutputInterface $output): ?int
     {
         $this->logger = new ConsoleLogger($output);
-        $output->writeln("LDAP group sync script for Gitlab-CE\n");
+        $output->writeln("LDAP users and groups sync script for Gitlab-CE\n");
 
         // Prepare
         if ($this->dryRun = boolval($input->getOption("dryrun", false))) {
@@ -82,33 +82,33 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
 
 
         // Retrieve groups from LDAP
-        $this->logger->notice("Retrieving directory groups and users.");
+        $this->logger->notice("Retrieving directory users and groups.");
 
-        $ldapGroups     = [];
-        $ldapGroupsNum  = 0;
         $ldapUsers      = [];
         $ldapUsersNum   = 0;
+        $ldapGroups     = [];
+        $ldapGroupsNum  = 0;
 
         try {
-            $this->getLdapGroupsAndUsers($config, $ldapGroups, $ldapGroupsNum, $ldapUsers, $ldapUsersNum);
+            $this->getLdapUsersAndGroups($config, $ldapUsers, $ldapUsersNum, $ldapGroups, $ldapGroupsNum);
         } catch (\Exception $e) {
             $this->logger->error(sprintf("LDAP failure: %s", $e->getMessage()), ["error" => $e]);
             return 1;
         }
 
-        $this->logger->notice("Retrieved directory groups and users.");
+        $this->logger->notice("Retrieved directory users and groups.");
 
 
 
         // Check if we have anything to do...
-        if (!is_array($ldapGroups) || 1 > $ldapGroupsNum) {
-            $this->logger->error("Nothing to do: No groups found in the directory.");
+        /* Actually, we might still want to sync users and groups aren't any of one set yet.
+        if (!is_array($ldapUsers) || 1 > $ldapUsersNum) {
+            $this->logger->error("Nothing to do: No users found in the directory.");
             return 1;
         }
 
-        /* Actually, we might still want to sync groups alone even if there are no users yet.
-        if (!is_array($ldapUsers) || 1 > $ldapUsersNum) {
-            $this->logger->error("Nothing to do: No users found in the directory.");
+        if (!is_array($ldapGroups) || 1 > $ldapGroupsNum) {
+            $this->logger->error("Nothing to do: No groups found in the directory.");
             return 1;
         }
          */
@@ -116,7 +116,7 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
 
 
         // Deploy to Gitlab instances
-        $this->logger->notice("Deploying groups and users to Gitlab instances.");
+        $this->logger->notice("Deploying users and groups to Gitlab instances.");
 
         $gitlabInstanceOnly = trim($input->getArgument("instance", null));
         foreach ($config["gitlab"]["instances"] as $gitlabInstance => $gitlabConfig) {
@@ -126,14 +126,14 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
             }
 
             try {
-                $this->deployGitlabGroupsAndUsers($config, $gitlabInstance, $gitlabConfig, $ldapGroups, $ldapGroupsNum, $ldapUsers, $ldapUsersNum);
+                $this->deployGitlabUsersAndGroups($config, $gitlabInstance, $gitlabConfig, $ldapUsers, $ldapUsersNum, $ldapGroups, $ldapGroupsNum);
             } catch (\Exception $e) {
                 $this->logger->error(sprintf("Gitlab failure: %s", $e->getMessage()), ["error" => $e]);
                 return 1;
             }
         }
 
-        $this->logger->notice("Deployed groups and users to Gitlab instances.");
+        $this->logger->notice("Deployed users and groups to Gitlab instances.");
 
 
 
@@ -323,23 +323,35 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
                     $addProblem("error", "ldap->queries->baseDn not specified.");
                 }
 
-                if (!array_key_exists("usersDn", $config["ldap"]["queries"])) {
-                    $addProblem("error", "ldap->queries->usersDn missing.");
-                } else if (!$config["ldap"]["queries"]["usersDn"] = trim($config["ldap"]["queries"]["usersDn"])) {
-                    // $addProblem("warning", "ldap->queries->usersDn not specified.");
+                if (!array_key_exists("userDn", $config["ldap"]["queries"])) {
+                    $addProblem("error", "ldap->queries->userDn missing.");
+                } else if (!$config["ldap"]["queries"]["userDn"] = trim($config["ldap"]["queries"]["userDn"])) {
+                    // $addProblem("warning", "ldap->queries->userDn not specified.");
                     // This is OK: Users will be looked for from the directory root.
                 }
 
-                if (!array_key_exists("usersFilter", $config["ldap"]["queries"])) {
-                    $addProblem("error", "ldap->queries->usersFilter missing.");
-                } else if (!$config["ldap"]["queries"]["usersFilter"] = trim($config["ldap"]["queries"]["usersFilter"])) {
-                    $addProblem("error", "ldap->queries->usersFilter not specified.");
+                if (!array_key_exists("userFilter", $config["ldap"]["queries"])) {
+                    $addProblem("error", "ldap->queries->userFilter missing.");
+                } else if (!$config["ldap"]["queries"]["userFilter"] = trim($config["ldap"]["queries"]["userFilter"])) {
+                    $addProblem("error", "ldap->queries->userFilter not specified.");
                 }
 
-                if (!array_key_exists("usersUniqueAttribute", $config["ldap"]["queries"])) {
-                    $addProblem("error", "ldap->queries->usersUniqueAttribute missing.");
-                } else if (!$config["ldap"]["queries"]["usersUniqueAttribute"] = trim($config["ldap"]["queries"]["usersUniqueAttribute"])) {
-                    $addProblem("error", "ldap->queries->usersUniqueAttribute not specified.");
+                if (!array_key_exists("userUniqueAttribute", $config["ldap"]["queries"])) {
+                    $addProblem("error", "ldap->queries->userUniqueAttribute missing.");
+                } else if (!$config["ldap"]["queries"]["userUniqueAttribute"] = trim($config["ldap"]["queries"]["userUniqueAttribute"])) {
+                    $addProblem("error", "ldap->queries->userUniqueAttribute not specified.");
+                }
+
+                if (!array_key_exists("userNameAttribute", $config["ldap"]["queries"])) {
+                    $addProblem("error", "ldap->queries->userNameAttribute missing.");
+                } else if (!$config["ldap"]["queries"]["userNameAttribute"] = trim($config["ldap"]["queries"]["userNameAttribute"])) {
+                    $addProblem("error", "ldap->queries->userNameAttribute not specified.");
+                }
+
+                if (!array_key_exists("userEmailAttribute", $config["ldap"]["queries"])) {
+                    $addProblem("error", "ldap->queries->userEmailAttribute missing.");
+                } else if (!$config["ldap"]["queries"]["userEmailAttribute"] = trim($config["ldap"]["queries"]["userEmailAttribute"])) {
+                    $addProblem("error", "ldap->queries->userEmailAttribute not specified.");
                 }
 
                 if (!array_key_exists("groupDn", $config["ldap"]["queries"])) {
@@ -375,20 +387,30 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
         if (!array_key_exists("gitlab", $config) || !is_array($config["gitlab"])) {
             $addProblem("error", "gitlab missing.");
         } else {
-            if (!array_key_exists("debug", $config["debug"])) {
-                $addProblem("warning", "debug->debug missing. (Assuming false.)");
-                $config["debug"]["debug"] = false;
-            } else if (null === $config["debug"]["debug"]) {
-                $addProblem("warning", "debug->debug not specified. (Assuming false.)");
-                $config["debug"]["debug"] = false;
-            } else if (!is_bool($config["debug"]["debug"])) {
-                $addProblem("error", "debug->debug is not a boolean.");
+            if (!array_key_exists("debug", $config["gitlab"])) {
+                $addProblem("warning", "gitlab->debug missing. (Assuming false.)");
+                $config["gitlab"]["debug"] = false;
+            } else if (null === $config["gitlab"]["debug"]) {
+                $addProblem("warning", "gitlab->debug not specified. (Assuming false.)");
+                $config["gitlab"]["debug"] = false;
+            } else if (!is_bool($config["gitlab"]["debug"])) {
+                $addProblem("error", "gitlab->debug is not a boolean.");
             }
 
             // << Gitlab options
             if (!array_key_exists("options", $config["gitlab"]) || !is_array($config["gitlab"]["options"])) {
                 $addProblem("error", "gitlab->options missing.");
             } else {
+                if (!array_key_exists("userRake", $config["gitlab"]["options"])) {
+                    $addProblem("warning", "gitlab->options->userRake missing. (Assuming true.)");
+                    $config["gitlab"]["options"]["userRake"] = true;
+                } else if (null === $config["gitlab"]["options"]["userRake"]) {
+                    $addProblem("warning", "gitlab->options->userRake not specified. (Assuming true.)");
+                    $config["gitlab"]["options"]["userRake"] = true;
+                } else if (!is_bool($config["gitlab"]["options"]["userRake"])) {
+                    $addProblem("error", "gitlab->options->userRake is not a boolean.");
+                }
+
                 if (!array_key_exists("createEmptyGroups", $config["gitlab"]["options"])) {
                     $addProblem("warning", "gitlab->options->createEmptyGroups missing. (Assuming false.)");
                     $config["gitlab"]["options"]["createEmptyGroups"] = false;
@@ -503,15 +525,15 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
     }
 
     /**
-     * Get groups and users from LDAP.
+     * Get users and groups from LDAP.
      * @param  array  $config     Validated configuration
-     * @param  array  &$groups    Groups output
-     * @param  int    &$groupsNum Groups count output
      * @param  array  &$users     Users output
      * @param  int    &$usersNum  Users count output
+     * @param  array  &$groups    Groups output
+     * @param  int    &$groupsNum Groups count output
      * @return void               Success if returned, exception thrown on error
      */
-    private function getLdapGroupsAndUsers(array $config, array &$groups, int &$groupsNum, array &$users, int &$usersNum): void
+    private function getLdapUsersAndGroups(array $config, array &$users, int &$usersNum, array &$groups, int &$groupsNum): void
     {
         // Connect
         $this->logger->notice("Establishing LDAP connection.", [
@@ -559,13 +581,16 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
 
         $this->logger->notice("LDAP connection established.");
 
-        // Retrieve users
+        // << Retrieve users
         if (false === ($ldapUsersQuery = @ldap_search($ldap, sprintf(
-            "%s,%s",
-            $config["ldap"]["queries"]["usersDn"],
+            "%s%s%s",
+            $config["ldap"]["queries"]["userDn"],
+            strlen($config["ldap"]["queries"]["userDn"]) >= 1 ? "," : "",
             $config["ldap"]["queries"]["baseDn"]
-        ), $config["ldap"]["queries"]["usersFilter"], [
-            $config["ldap"]["queries"]["usersUniqueAttribute"],
+        ), $config["ldap"]["queries"]["userFilter"], [
+            $config["ldap"]["queries"]["userUniqueAttribute"],
+            $config["ldap"]["queries"]["userNameAttribute"],
+            $config["ldap"]["queries"]["userEmailAttribute"],
         ]))) {
             throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
@@ -573,7 +598,9 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
         if (is_array($ldapUsers = @ldap_get_entries($ldap, $ldapUsersQuery))) {
             if ($ldapUsersNum = count($ldapUsers)) {
                 $this->logger->notice(sprintf("%d directory user(s) found.", $ldapUsersNum));
-                $ldapUserAttribute = strtolower($config["ldap"]["queries"]["usersUniqueAttribute"]);
+                $ldapUserAttribute  = strtolower($config["ldap"]["queries"]["userUniqueAttribute"]);
+                $ldapNameAttribute  = strtolower($config["ldap"]["queries"]["userNameAttribute"]);
+                $ldapEmailAttribute = strtolower($config["ldap"]["queries"]["userEmailAttribute"]);
 
                 foreach ($ldapUsers as $i => $ldapUser) {
                     if (!is_int($i)) {
@@ -586,43 +613,90 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
                         continue;
                     }
 
-                    if (!isset($ldapUser[$ldapUserAttribute])) {
-                        $this->logger->error(sprintf("User #%d: Missing attribute \"%s\".", $n, $ldapUserAttribute));
+                    if (!isset($ldapUser["dn"]) || !is_string($ldapUser["dn"])) {
+                        $this->logger->error(sprintf("User #%d: Missing distinguished name.", $n));
                         continue;
                     }
 
-                    if (!is_array($ldapUser[$ldapUserAttribute]) || !isset($ldapUser[$ldapUserAttribute][0])) {
-                        $this->logger->error(sprintf("User #%d: Invalid attribute \"%s\".", $n, $ldapUserAttribute));
+                    if (!$ldapUserDn = trim($ldapUser["dn"])) {
+                        $this->logger->error(sprintf("User #%d: Empty distinguished name.", $n));
+                        continue;
+                    }
+
+                    if (!isset($ldapUser[$ldapUserAttribute])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Missing attribute \"%s\".", $n, $ldapUserDn, $ldapUserAttribute));
+                        continue;
+                    }
+
+                    if (!is_array($ldapUser[$ldapUserAttribute]) || !isset($ldapUser[$ldapUserAttribute][0]) || !is_string($ldapUser[$ldapUserAttribute][0])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Invalid attribute \"%s\".", $n, $ldapUserDn, $ldapUserAttribute));
                         continue;
                     }
 
                     if (!$ldapUserName = trim($ldapUser[$ldapUserAttribute][0])) {
-                        $this->logger->error(sprintf("User #%d: Empty attribute \"%s\".", $n, $ldapUserAttribute));
+                        $this->logger->error(sprintf("User #%d [%s]: Empty attribute \"%s\".", $n, $ldapUserDn, $ldapUserAttribute));
                         continue;
                     }
 
-                    $this->logger->info(sprintf("Found directory user \"%s\".", $ldapUserName));
-                    if (isset($users[$ldapUserName])) {
-                        $this->logger->warning(sprintf("Duplicate directory user \"%s\".", $ldapUserName));
+                    if (!isset($ldapUser[$ldapNameAttribute])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Missing attribute \"%s\".", $n, $ldapUserDn, $ldapNameAttribute));
                         continue;
                     }
 
-                    $users[$ldapUserName] = [];
+                    if (!is_array($ldapUser[$ldapNameAttribute]) || !isset($ldapUser[$ldapNameAttribute][0]) || !is_string($ldapUser[$ldapNameAttribute][0])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Invalid attribute \"%s\".", $n, $ldapUserDn, $ldapNameAttribute));
+                        continue;
+                    }
+
+                    if (!$ldapUserFullName = trim($ldapUser[$ldapNameAttribute][0])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Empty attribute \"%s\".", $n, $ldapUserDn, $ldapNameAttribute));
+                        continue;
+                    }
+
+                    if (!isset($ldapUser[$ldapEmailAttribute])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Missing attribute \"%s\".", $n, $ldapUserDn, $ldapEmailAttribute));
+                        continue;
+                    }
+
+                    if (!is_array($ldapUser[$ldapEmailAttribute]) || !isset($ldapUser[$ldapEmailAttribute][0]) || !is_string($ldapUser[$ldapEmailAttribute][0])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Invalid attribute \"%s\".", $n, $ldapUserDn, $ldapEmailAttribute));
+                        continue;
+                    }
+
+                    if (!$ldapUserEmail = trim($ldapUser[$ldapEmailAttribute][0])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Empty attribute \"%s\".", $n, $ldapUserDn, $ldapEmailAttribute));
+                        continue;
+                    }
+
+                    $this->logger->info(sprintf("Found directory user \"%s\" [%s].", $ldapUserName, $ldapUserDn));
+                    if (isset($users[$ldapUserName]) && is_array($users[$ldapUserName])) {
+                        $this->logger->warning(sprintf("Duplicate directory user \"%s\" [%s].", $ldapUserName, $ldapUserDn));
+                        continue;
+                    }
+
+                    $users[$ldapUserName] = [
+                        "dn"            => $ldapUserDn,
+                        "username"      => $ldapUserName,
+                        "fullName"      => $ldapUserFullName,
+                        "email"         => $ldapUserEmail,
+                    ];
                 }
 
-                ksort($users);
                 $this->logger->notice(sprintf("%d directory user(s) recognised.", $usersNum = count($users)));
+                ksort($users);
             } else {
                 $this->logger->warning("No directory users found.");
             }
         } else {
             $this->logger->error("Directory users query failed.");
         }
+        // >> Retrieve users
 
-        // Retrieve groups
+        // << Retrieve groups
         if (false === ($ldapGroupsQuery = @ldap_search($ldap, sprintf(
-            "%s,%s",
+            "%s%s%s",
             $config["ldap"]["queries"]["groupDn"],
+            strlen($config["ldap"]["queries"]["groupDn"]) >= 1 ? "," : "",
             $config["ldap"]["queries"]["baseDn"]
         ), $config["ldap"]["queries"]["groupFilter"], [
             $config["ldap"]["queries"]["groupUniqueAttribute"],
@@ -717,17 +791,19 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
                         $groups[$ldapGroupName][] = $ldapGroupMemberName;
                     }
 
-                    ksort($groups[$ldapGroupName]);
+                    $this->logger->notice(sprintf("%d directory group \"%s\" member(s) recognised.", $groupUsersNum = count($groups[$ldapGroupName]), $ldapGroupName));
+                    sort($groups[$ldapGroupName]);
                 }
 
-                ksort($groups);
                 $this->logger->notice(sprintf("%d directory groups(s) recognised.", $groupsNum = count($groups)));
+                ksort($groups);
             } else {
                 $this->logger->warning("No directory groups found.");
             }
         } else {
             $this->logger->error("Directory groups query failed.");
         }
+        // >> Retrieve groups
 
         // Disconnect
         $this->logger->debug("LDAP: Unbinding");
@@ -740,17 +816,17 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
     }
 
     /**
-     * Deploy groups and users to a Gitlab instance.
+     * Deploy users and groups to a Gitlab instance.
      * @param  array  $config         Validated configuration
      * @param  string $gitlabInstance Gitlab instance name
      * @param  array  $gitlabConfig   Gitlab instance configuration
-     * @param  array  $ldapGroups     LDAP groups
-     * @param  int    $ldapGroupsNum  LDAP groups count
      * @param  array  $ldapUsers      LDAP users
      * @param  int    $ldapUsersNum   LDAP users count
+     * @param  array  $ldapGroups     LDAP groups
+     * @param  int    $ldapGroupsNum  LDAP groups count
      * @return void                   Success if returned, exception thrown on error
      */
-    private function deployGitlabGroupsAndUsers(array $config, string $gitlabInstance, array $gitlabConfig, array $ldapGroups, int $ldapGroupsNum, array $ldapUsers, int $ldapUsersNum): void
+    private function deployGitlabUsersAndGroups(array $config, string $gitlabInstance, array $gitlabConfig, array $ldapUsers, int $ldapUsersNum, array $ldapGroups, int $ldapGroupsNum): void
     {
         $slugifyGitlabName = new Slugify([
             "regexp"        => "/([^A-Za-z0-9]|-_\. )+/",
@@ -777,19 +853,83 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
             ->authenticate($gitlabConfig["token"], \Gitlab\Client::AUTH_HTTP_TOKEN)
         ;
 
-        $groupsSync = [
-            "found"     => [],
-            "foundNum"  => 0,
-            "new"       => [],
-            "newNum"    => 0,
-            "extra"     => [],
-            "extraNum"  => 0,
-            "sync"      => [],
-            "syncNum"   => 0,
-        ];
+        // << Handle users
+        if (is_array($gitlabUsers = $gitlab->api("users")->all())) {
+            $usersSync = [
+                "found"     => [],
+                "foundNum"  => 0,
+                "new"       => [],
+                "newNum"    => 0,
+                "extra"     => [],
+                "extraNum"  => 0,
+                "sync"      => [],
+                "syncNum"   => 0,
+            ];
 
-        //  Retrieve groups
+            if ($gitlabUsersNum = count($gitlabUsers)) {
+                $this->logger->notice(sprintf("%d Gitlab user(s) found.", $gitlabUsersNum));
+
+                foreach ($gitlabUsers as $i => $gitlabUser) {
+                    $n = $i + 1;
+
+                    if (!is_array($gitlabUser)) {
+                        $this->logger->error(sprintf("User #%d: Not an array.", $n));
+                        var_dump($gitlabUser);
+                        continue;
+                    }
+
+                    if (!isset($gitlabUser["id"])) {
+                        $this->logger->error(sprintf("User #%d: Missing ID.", $n));
+                        continue;
+                    }
+
+                    if (!$gitlabUserId = intval($gitlabUser["id"])) {
+                        $this->logger->error(sprintf("User #%d: Empty ID.", $n));
+                        continue;
+                    }
+
+                    if (!isset($gitlabUser["username"])) {
+                        $this->logger->error(sprintf("User #%d: Missing user name.", $n));
+                        continue;
+                    }
+
+                    if (!$gitlabUserName = trim($gitlabUser["username"])) {
+                        $this->logger->error(sprintf("User #%d: Empty user name.", $n));
+                        continue;
+                    }
+
+                    $this->logger->info(sprintf("Found Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
+                    if (array_key_exists($gitlabUserId, $usersSync["found"]) || in_array($gitlabUserName, $usersSync["found"])) {
+                        $this->logger->warning(sprintf("Duplicate Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
+                        continue;
+                    }
+
+                    $usersSync["found"][$gitlabUserId] = $gitlabUserName;
+                }
+
+                asort($usersSync["found"]);
+                $this->logger->notice(sprintf("%d Gitlab users(s) recognised.", $usersSync["foundNum"] = count($usersSync["found"])));
+            } else {
+                $this->logger->warning("No Gitlab users found.");
+            }
+        } else {
+            $this->logger->error("Gitlab users query failed.");
+        }
+        // >> Handle users
+
+        // << Handle groups
         if (is_array($gitlabGroups = $gitlab->api("groups")->all())) {
+            $groupsSync = [
+                "found"     => [],
+                "foundNum"  => 0,
+                "new"       => [],
+                "newNum"    => 0,
+                "extra"     => [],
+                "extraNum"  => 0,
+                "sync"      => [],
+                "syncNum"   => 0,
+            ];
+
             if ($gitlabGroupsNum = count($gitlabGroups)) {
                 $this->logger->notice(sprintf("%d Gitlab group(s) found.", $gitlabGroupsNum));
 
@@ -927,6 +1067,7 @@ class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
         } else {
             $this->logger->error("Gitlab groups query failed.");
         }
+        // >> Handle groups
 
         // Disconnect
         $this->logger->debug("Gitlab: Unbinding");

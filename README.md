@@ -1,10 +1,10 @@
 # LDAP group sync script for Gitlab-CE
 
-This nifty little PHP-CLI tool will synchronise user groups from an LDAP server to Gitlab community edition instance(s).
+This nifty little PHP-CLI tool will synchronise users and user groups from an LDAP server to Gitlab community edition instance(s).
 
 Though this functionality is available out of the box with Gitlab enterprise edition the pricing model is completely infeasible for teams of hobbyists working on non-revenue based projects but need to use a centralised authentication base.
 
-This tool is not designed to sync the users themselves into Gitlab as Gitlab-CE can already authenticate fully against an LDAP instance. It is only designed to sync user group memberships, which is typically only available in Gitlab-EE.
+As a bonus it can also do a light rake of LDAP users not currently in Gitlab, so those that haven't signed in for their first time can still have projects and permissions assigned to them. **This may make the tool unsuitable git Gitlab-EE as this would certainly impact its licensing fees!**
 
 ## Getting Started
 
@@ -18,7 +18,7 @@ Requirements for running this tool from a management station:
 * [PHP](https://www.php.net) version 7.0 or later: Available to most Linux distributions via `apt-get` or `yum`. You don't need anything web related, but you will need the command line interface.
 * [Composer](https://getcomposer.org/): Available to most Linux distributions via `apt-get` or `yum`, or manually download it as `composer.phar` alongside this tool.
 * LDAP instance: Used for Gitlab's authentication. It can (likely) be Microsoft Active Directory, OpenLDAP, 389-DS (including FreeIPA), and likely any other LDAP system, though **most of my testing is using a 389-DS instance**.
-* [Gitlab community edition](https://gitlab.com/gitlab-org/gitlab-ce/): This must be configured to authenticate against an LDAP instance.
+* [Gitlab community edition](https://gitlab.com/gitlab-org/gitlab-ce/): This must be configured to authenticate against an LDAP instance already.
 
 ## Installing
 
@@ -67,7 +67,7 @@ Leaving this null will assume version 3.
 
 The encryption protocol.
 
-* "none" for unencrypted connections, usually port 389. (Generally only safe to use with "localhost".)
+* "none" for unencrypted connections, usually port 389. (Generally only safe to use with "localhost" or a very tightly controlled link between this tool and the LDAP server.)
 * "tls" for **explicit** SSL/TLS connections, usually on port 389. (Often called "STARTTLS".)
 * "ssl" for **implicit** SSL/TLS connections, usually on port 636. (Often called "LDAPS".)
 
@@ -176,6 +176,16 @@ This section configures how to communicate with your Gitlab-CE instance.
 
 #### options
 
+##### userRake *(bool|null)*
+
+Specify whether LDAP users should be raked into Gitlab. This means that LDAP users of which have not signed in for the first time will now have a minimal user record created for them on Gitlab in advance, which allows you to assign them projects and permissions, and of course put them into their respective groups in advance.
+
+This could result in a large number of user records being created on Gitlab of which may never sign in.
+
+**Do not enable this option if you so happen to have the enterprise edition of Gitlab as it can impact the licensing fees you need to pay.**
+
+Default: *true*
+
 ##### createEmptyGroups *(bool|null)*
 
 Specify whether groups containing no LDAP users should still be created in Gitlab.
@@ -265,7 +275,7 @@ Make up an instance name. For example if you had multiple Gitlab installations o
 
 ###### url *(string)*
 
-Specify the full HTTP/HTTPS URL to this Gitlab instance, e.g. "https://athena.gitlab.example.com". This is the same URL you use to really visit this Gitlab installation from your web browser.
+Specify the full HTTP/HTTPS URL to this Gitlab instance, e.g. "https://athena.gitlab.example.com" or "https://demeter.gitlab.example.com". This is the same URL you use to really visit this Gitlab installation from your web browser.
 
 ###### token *(string)*
 
@@ -279,21 +289,22 @@ Specify the LDAP server name used by this Gitlab instance. You can find this in 
 
 Once you've configured this tool you can run it from a CLI using:
 
-    `php bin/console ldap:groups:sync -d`
+    `php bin/console ldap:sync -d`
 
 Depending on your system's PHP installation you may need to use `php-cli` instead of `php`. (This typically only occurs on WHM/cPanel based servers configured to host PHP via the fast process manager, PHP-FPM.)
 
-The `-d` option is important for your first run. This enables "dry run" mode, meaning no changes will be persisted to your Gitlab instances. After running this tool you should evaluate the changes that will be made based on the output, then run it again without the `-d` option to persist the changes.
+**The `-d` option is important for your first run.** This enables "dry run" mode, meaning no changes will be persisted to your Gitlab instances. After running this tool you should evaluate the changes that will be made based on the output, then run it again without the `-d` option to persist the changes.
 
 If you'd like to see more verbose output you can add up to 3 `-v` switches, for example:
 
-    `php bin/console ldap:groups:sync -v`
-    `php bin/console ldap:groups:sync -vv`
-    `php bin/console ldap:groups:sync -vvv`
+    `php bin/console ldap:sync -v`
+    `php bin/console ldap:sync -vv`
+    `php bin/console ldap:sync -vvv`
 
 If you'd like to only sync with a single Gitlab instance you can specify the name of it as per your configuration as an argument, for example:
 
-    `php bin/console ldap:groups:sync -d athena`
+    `php bin/console ldap:sync athena`
+    `php bin/console ldap:sync demeter`
 
 ## Built With
 
