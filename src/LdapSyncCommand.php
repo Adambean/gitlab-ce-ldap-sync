@@ -1,6 +1,6 @@
 <?php
 
-namespace AdamReece\GitlabCeLdapGroupSync;
+namespace AdamReece\GitlabCeLdapSync;
 
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -13,7 +13,7 @@ use Symfony\Component\Yaml\Exception\ParseException;
 
 use Cocur\Slugify\Slugify;
 
-class LdapGroupSyncCommand extends \Symfony\Component\Console\Command\Command
+class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 {
     private $logger = null;
     private $dryRun = false;

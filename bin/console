@@ -13,8 +13,8 @@ define("CONFIG_FILE_DIST_PATH", sprintf("%s/%s", ROOT_DIR, CONFIG_FILE_DIST_NAME
 
 use Symfony\Component\Console\Application;
 
-use AdamReece\GitlabCeLdapGroupSync\LdapGroupSyncCommand;
+use AdamReece\GitlabCeLdapSync\LdapSyncCommand;
 
 $app = new Application();
-$app->add(new LdapGroupSyncCommand());
+$app->add(new LdapSyncCommand());
 $app->run();
