@@ -1,10 +1,27 @@
-# LDAP group sync script for Gitlab-CE
+# LDAP users and groups sync script for Gitlab-CE
 
 This nifty little PHP-CLI tool will synchronise users and user groups from an LDAP server to Gitlab community edition instance(s).
 
 Though this functionality is available out of the box with Gitlab enterprise edition the pricing model is completely infeasible for teams of hobbyists working on non-revenue based projects but need to use a centralised authentication base.
 
 As a bonus it can also do a light rake of LDAP users not currently in Gitlab, so those that haven't signed in for their first time can still have projects and permissions assigned to them. **This may make the tool unsuitable git Gitlab-EE as this would certainly impact its licensing fees!**
+
+## **THIS TOOL IS NOT COMPLETED YET. DO NOT USE IT IN A PRODUCTION ENVIRONMENT.**
+
+**Seriously. Only use this on test Gitlab CE instances.**
+
+What is complete:
+
+* Reading users from LDAP
+* Reading groups from LDAP
+* Synchronising groups to Gitlab
+
+What is left to-do:
+
+* Synchronising users to Gitlab
+* Synchronising group memberships to Gitlab
+
+**For now always use the dry run `-d` option to prevent writing to Gitlab. You have been warned.**
 
 ## Getting Started
 
