@@ -193,15 +193,51 @@ This section configures how to communicate with your Gitlab-CE instance.
 
 #### options
 
-##### userRake *(bool|null)*
+##### userNamesToIgnore *(array|null)*
 
-Specify whether LDAP users should be raked into Gitlab. This means that LDAP users of which have not signed in for the first time will now have a minimal user record created for them on Gitlab in advance, which allows you to assign them projects and permissions, and of course put them into their respective groups in advance.
+Specify a list of user names of which this tool should ignore. (Case-sensitive.)
 
-This could result in a large number of user records being created on Gitlab of which may never sign in.
+This varies not only according to which directory software you're using, but also how your directory has been structured.
 
-**Do not enable this option if you so happen to have the enterprise edition of Gitlab as it can impact the licensing fees you need to pay.**
+* For Microsoft Active Directory this is could be "Administrator", "Guest", and any other user you don't expect to contain human users.
+* OpenLDAP and 389-DS do not ship with any users out of the box, though "root" and "nobody" are likely candidates to ignore.
 
-Default: *true*
+This must be defined as an array even if you have only 1 user. Be sure to quote user names that have spaces. For example:
+
+```
+userNamesToIgnore:
+    - "root"
+    - "nobody"
+    - "Administrator"
+    - "Guest"
+```
+
+User name "root" must always be ignored because this is the built-in Gitlab root user. Do not attempt to create/sync this user name.
+
+Default: *null*
+
+##### groupNamesToIgnore *(array|null)*
+
+Specify a list of group names of which this tool should ignore. (Case-sensitive.)
+
+This varies not only according to which directory software you're using, but also how your directory has been structured. You do not have to specify every group if you've left the "createEmptyGroups" setting (further down) switched off, as this will prevent groups containing no users to be ignored anyway.
+
+* For Microsoft Active Directory this is could be "Domain Computers", "Domain Controllers", "DnsAdmins", "DnsUpdateProxy", and any other group you don't expect to contain human users.
+* OpenLDAP and 389-DS do not ship with any groups out of the box.
+
+This must be defined as an array even if you have only 1 group. Be sure to quote group names that have spaces. For example:
+
+```
+groupNamesToIgnore:
+    - "Root"
+    - "Users"
+    - "Managed Service Accounts"
+    - "Marketing Staff"
+```
+
+Group names "Root" and "Users" must always be ignored because they are reserved keywords. Do not attempt to create/sync these group names.
+
+Default: *null*
 
 ##### createEmptyGroups *(bool|null)*
 
@@ -256,29 +292,6 @@ groupNamesOfExternal:
     - "Domain Guests"
     - "Clients"
 ```
-
-Default: *null*
-
-##### groupNamesToIgnore *(array|null)*
-
-Specify a list of group names of which this tool should ignore.
-
-This varies not only according to which directory software you're using, but also how your directory has been structured. You do not have to specify every group if you've left the "createEmptyGroups" setting (further down) switched off, as this will prevent groups containing no users to be ignored anyway.
-
-* For Microsoft Active Directory this is could be "Domain Computers", "Domain Controllers", "DnsAdmins", "DnsUpdateProxy", and any other group you don't expect to contain human users.
-* OpenLDAP and 389-DS do not ship with any groups out of the box.
-
-This must be defined as an array even if you have only 1 group. Be sure to quote group names that have spaces. For example:
-
-```
-groupNamesToIgnore:
-    - "Root"
-    - "Users"
-    - "Managed Service Accounts"
-    - "Marketing Staff"
-```
-
-Group name "Root" and "Users" must always be ignored because they are reserved keywords. Do not attempt to create/sync these group names.
 
 Default: *null*
 

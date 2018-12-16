@@ -31,17 +31,14 @@ gitlab:
     debug: false
 
     options:
-        userRake:                       true
+        userNamesToIgnore:              ~
+        groupNamesToIgnore:             ~
+
         createEmptyGroups:              false
         deleteExtraGroups:              false
 
         groupNamesOfAdministrators:     ~
-
         groupNamesOfExternal:           ~
-
-        groupNamesToIgnore:
-            - "Root"
-            - "Users"
 
     instances:
         example:
