@@ -48,6 +48,21 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $this->logger->warning("Dry run enabled: No changes will be persisted.");
         }
 
+        foreach([
+            "ldap_connect",
+            "ldap_bind",
+            "ldap_set_option",
+            "ldap_errno",
+            "ldap_error",
+            "ldap_search",
+            "ldap_get_entries",
+        ] as $ldapFunction) {
+            if (!function_exists($ldapFunction)) {
+                $this->logger->critical(sprintf("PHP-LDAP function \"%s\" does not exist.", $ldapFunction));
+                return 1;
+            }
+        }
+
 
 
         // Load configuration
