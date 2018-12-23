@@ -14,14 +14,14 @@ What is complete:
 
 * Reading users from LDAP
 * Reading groups from LDAP
+* Synchronising users to Gitlab
 * Synchronising groups to Gitlab
 
 What is left to-do:
 
-* Synchronising users to Gitlab
 * Synchronising group memberships to Gitlab
 
-**For now always use the dry run `-d` option to prevent writing to Gitlab. You have been warned.**
+**If in doubt use the dry run `-d` option to prevent writing to Gitlab first, combined with `-vv` to see exactly what would happen. You have been warned.**
 
 ## Getting Started
 
@@ -129,8 +129,8 @@ Default: *null*
 
 Specify a search filter for finding user objects within the above DN.
 
-* For Microsoft Active Directory this is typically "(objectClass=user)".
-* For OpenLDAP and 389-DS this is typically "(objectClass=inetOrgPerson)".
+* For Microsoft Active Directory this is typically "(&(objectCategory=person)(objectClass=user))", though if you want to exclude disabled users, use "(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))".
+* For OpenLDAP and 389-DS this is typically "(objectClass=inetOrgPerson)", though if you want to exclude 389-DS disabled users, use "(&(objectClass=inetOrgPerson)(!(nsAccountLock=true)))".
 
 Default: "(objectClass=inetOrgPerson)"
 
@@ -196,7 +196,7 @@ This section configures how to communicate with your Gitlab-CE instance.
 
 ##### userNamesToIgnore *(array|null)*
 
-Specify a list of user names of which this tool should ignore. (Case-sensitive.)
+Specify a list of user names of which this tool should ignore. (Case-insensitive.)
 
 This varies not only according to which directory software you're using, but also how your directory has been structured.
 
@@ -219,7 +219,7 @@ Default: *null*
 
 ##### groupNamesToIgnore *(array|null)*
 
-Specify a list of group names of which this tool should ignore. (Case-sensitive.)
+Specify a list of group names of which this tool should ignore. (Case-insensitive.)
 
 This varies not only according to which directory software you're using, but also how your directory has been structured. You do not have to specify every group if you've left the "createEmptyGroups" setting (further down) switched off, as this will prevent groups containing no users to be ignored anyway.
 
@@ -347,7 +347,11 @@ Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c6
 
 ### Potential features
 
-I don't have anything further planned as this fulfils my purpose.
+* Specifying an attribute on the LDAP user in which this script could write back a user ID for each Gitlab instance.
+  * This would mean user name (UID) changes in LDAP could be detected and synchronised automatically without user duplication happening.
+  * It would likely be a string attribute in the form of `instanceName:userId`, for example `athena:3` and `demeter:15`.
+  * It could either be a multi-value attribute to handle multiple Gitlab instances, or a single-value attribute split by a semi-colon, for example `athena:3;demeter:15`.
+* Likely the same as the above but for groups too. (Group renaming.)
 
 ## Versioning
 
