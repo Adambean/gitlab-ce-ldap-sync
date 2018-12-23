@@ -695,7 +695,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                         continue;
                     }
 
-                    if (in_array($ldapUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
+                    if ($this->in_array_i($ldapUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
                         $this->logger->info(sprintf("User \"%s\" in ignore list.", $ldapUserName));
                         continue;
                     }
@@ -771,7 +771,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                         continue;
                     }
 
-                    if (in_array($ldapGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
+                    if ($this->in_array_i($ldapGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
                         $this->logger->info(sprintf("Group \"%s\" in ignore list.", $ldapGroupName));
                         continue;
                     }
@@ -794,11 +794,11 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                         continue;
                     }
 
-                    if ($groupMembersAreAdmin = in_array($ldapGroupName, $config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
+                    if ($groupMembersAreAdmin = $this->in_array_i($ldapGroupName, $config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
                         $this->logger->info(sprintf("Group \"%s\" members are administrators.", $ldapGroupName));
                     }
 
-                    if ($groupMembersAreExternal = in_array($ldapGroupName, $config["gitlab"]["options"]["groupNamesOfExternal"])) {
+                    if ($groupMembersAreExternal = $this->in_array_i($ldapGroupName, $config["gitlab"]["options"]["groupNamesOfExternal"])) {
                         $this->logger->info(sprintf("Group \"%s\" members are external.", $ldapGroupName));
                     }
 
@@ -848,7 +848,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 }
 
                 ksort($groups);
-                $this->logger->notice(sprintf("%d directory groups(s) recognised.", $groupsNum = count($groups)));
+                $this->logger->notice(sprintf("%d directory group(s) recognised.", $groupsNum = count($groups)));
             } else {
                 $this->logger->warning("No directory groups found.");
             }
@@ -894,6 +894,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             "trim"          => true,
         ]);
 
+        // Convert LDAP group names into a format safe for Gitlab's restrictions
+        $ldapGroupsSafe = [];
+        foreach ($ldapGroups as $ldapGroupName => $ldapGroupMembers) {
+            $ldapGroupsSafe[$slugifyGitlabName->slugify($ldapGroupName)] = $ldapGroupMembers;
+        }
+
         // Connect
         $this->logger->notice("Establishing Gitlab connection.", [
             "instance"  => $gitlabInstance,
@@ -906,352 +912,503 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         ;
 
         // << Handle users
-        if (is_array($gitlabUsers = $gitlab->api("users")->all())) {
-            $usersSync = [
-                "found"     => [],  // All existing Gitlab users
-                "foundNum"  => 0,
-                "new"       => [],  // Users in LDAP but not Gitlab
-                "newNum"    => 0,
-                "extra"     => [],  // Users in Gitlab but not LDAP
-                "extraNum"  => 0,
-                "sync"      => [],  // Users in both LDAP and Gitlab
-                "syncNum"   => 0,
-            ];
+        $usersSync = [
+            "found"     => [],  // All existing Gitlab users
+            "foundNum"  => 0,
+            "new"       => [],  // Users in LDAP but not Gitlab
+            "newNum"    => 0,
+            "extra"     => [],  // Users in Gitlab but not LDAP
+            "extraNum"  => 0,
+            "sync"      => [],  // Users in both LDAP and Gitlab
+            "syncNum"   => 0,
+        ];
 
-            // Find all existing Gitlab users
-            if ($gitlabUsersNum = count($gitlabUsers)) {
-                $this->logger->notice(sprintf("%d Gitlab user(s) found.", $gitlabUsersNum));
+        // Find all existing Gitlab users
+        $this->logger->notice("Finding all existing Gitlab users...");
+        $p = 0;
 
-                foreach ($gitlabUsers as $i => $gitlabUser) {
-                    $n = $i + 1;
+        while (is_array($gitlabUsers = $gitlab->api("users")->all(["page" => ++$p, "per_page" => 100])) && count($gitlabUsers) >= 1) {
+            foreach ($gitlabUsers as $i => $gitlabUser) {
+                $n = $i + 1;
 
-                    if (!is_array($gitlabUser)) {
-                        $this->logger->error(sprintf("User #%d: Not an array.", $n));
-                        var_dump($gitlabUser);
-                        continue;
-                    }
-
-                    if (!isset($gitlabUser["id"])) {
-                        $this->logger->error(sprintf("User #%d: Missing ID.", $n));
-                        continue;
-                    }
-
-                    if (!$gitlabUserId = intval($gitlabUser["id"])) {
-                        $this->logger->error(sprintf("User #%d: Empty ID.", $n));
-                        continue;
-                    }
-
-                    if (!isset($gitlabUser["username"])) {
-                        $this->logger->error(sprintf("User #%d: Missing user name.", $n));
-                        continue;
-                    }
-
-                    if (!$gitlabUserName = trim($gitlabUser["username"])) {
-                        $this->logger->error(sprintf("User #%d: Empty user name.", $n));
-                        continue;
-                    }
-
-                    if ("root" === $gitlabUserName) {
-                        $this->logger->info("Gitlab built-in root user will be ignored.");
-                        continue; // The Gitlab root user should never be updated from LDAP.
-                    }
-
-                    $this->logger->info(sprintf("Found Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
-                    if (array_key_exists($gitlabUserId, $usersSync["found"]) || in_array($gitlabUserName, $usersSync["found"])) {
-                        $this->logger->warning(sprintf("Duplicate Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
-                        continue;
-                    }
-
-                    $usersSync["found"][$gitlabUserId] = $gitlabUserName;
+                if (!is_array($gitlabUser)) {
+                    $this->logger->error(sprintf("User #%d: Not an array.", $n));
+                    continue;
                 }
 
-                asort($usersSync["found"]);
-                $this->logger->notice(sprintf("%d Gitlab user(s) recognised.", $usersSync["foundNum"] = count($usersSync["found"])));
-            } else {
-                $this->logger->warning("No Gitlab users found.");
-            }
+                if (!isset($gitlabUser["id"])) {
+                    $this->logger->error(sprintf("User #%d: Missing ID.", $n));
+                    continue;
+                }
 
-            // Create directory users of which don't exist in Gitlab
-            $this->logger->notice("Creating directory users of which don't exist in Gitlab...");
-            foreach ($ldapUsers as $ldapUserName => $ldapUserDetails) {
-                if ("root" === $ldapUserName) {
+                if (!$gitlabUserId = intval($gitlabUser["id"])) {
+                    $this->logger->error(sprintf("User #%d: Empty ID.", $n));
+                    continue;
+                }
+
+                if (!isset($gitlabUser["username"])) {
+                    $this->logger->error(sprintf("User #%d: Missing user name.", $n));
+                    continue;
+                }
+
+                if (!$gitlabUserName = trim($gitlabUser["username"])) {
+                    $this->logger->error(sprintf("User #%d: Empty user name.", $n));
+                    continue;
+                }
+
+                if ("root" == $gitlabUserName) {
                     $this->logger->info("Gitlab built-in root user will be ignored.");
                     continue; // The Gitlab root user should never be updated from LDAP.
                 }
 
-                if (in_array($ldapUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
-                    $this->logger->info(sprintf("User \"%s\" in ignore list.", $ldapUserName));
+                $this->logger->info(sprintf("Found Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
+                if (isset($usersSync["found"][$gitlabUserId]) || $this->in_array_i($gitlabUserName, $usersSync["found"])) {
+                    $this->logger->warning(sprintf("Duplicate Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
                     continue;
                 }
 
-                $gitlabUserName = trim($ldapUserName);
-                if (in_array($gitlabUserName, $usersSync["found"])) {
-                    continue;
-                }
-
-                $this->logger->info(sprintf("Directory user \"%s\" is not in Gitlab.", $ldapUserName));
-
-                $this->logger->info(sprintf("Creating Gitlab user \"%s\" [%s].", $gitlabUserName, $ldapUserDetails["dn"]));
-                $gitlabUser = null;
-                !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->create($ldapUserDetails["email"], null, [
-                    "username"          => $gitlabUserName,
-                    "name"              => $ldapUserDetails["fullName"],
-                    "extern_uid"        => $ldapUserDetails["dn"],
-                    "provider"          => $gitlabConfig["ldapServerName"],
-                    "public_email"      => $ldapUserDetails["email"],
-                    "admin"             => $ldapUserDetails["isAdmin"],
-                    "can_create_group"  => $ldapUserDetails["isAdmin"],
-                    "skip_confirmation" => true,
-                    "external"          => $ldapUserDetails["isExternal"],
-                ])) : $this->logger->warning("Operation skipped due to dry run.");
-
-                $gitlabUserId = (is_array($gitlabUser) && isset($gitlabUser["id"]) && is_int($gitlabUser["id"])) ? $gitlabUser["id"] : sprintf("dry:%s", $ldapUserDetails["dn"]);
-                $usersSync["new"][$gitlabUserId] = $gitlabUserName;
+                $usersSync["found"][$gitlabUserId] = $gitlabUserName;
             }
-
-            asort($usersSync["new"]);
-            $this->logger->notice(sprintf("%d Gitlab user(s) created.", $usersSync["newNum"] = count($usersSync["new"])));
-
-            // Disable Gitlab users of which don't exist in directory
-            $this->logger->notice("Disabling Gitlab users of which don't exist in directory...");
-            foreach ($usersSync["found"] as $gitlabUserId => $gitlabUserName) {
-                if ("root" === $gitlabUserName) {
-                    $this->logger->info("Gitlab built-in root user will be ignored.");
-                    continue; // The Gitlab root user should never be updated from LDAP.
-                }
-
-                if (in_array($gitlabUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
-                    $this->logger->info(sprintf("User \"%s\" in ignore list.", $gitlabUserName));
-                    continue;
-                }
-
-                if (isset($ldapUsers[$gitlabUserName]) && is_array($ldapUsers[$gitlabUserName])) {
-                    continue;
-                }
-
-                $this->logger->info(sprintf("Gitlab user \"%s\" is not in directory.", $gitlabUserName));
-
-                $this->logger->warning(sprintf("Disabling Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
-                $gitlabUser = null;
-                !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->block($gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
-                !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->update($gitlabUserId, [
-                    "admin"             => false,
-                    "can_create_group"  => false,
-                    "external"          => true,
-                ])) : $this->logger->warning("Operation skipped due to dry run.");
-
-                $usersSync["extra"][$gitlabUserId] = $gitlabUserName;
-            }
-
-            asort($usersSync["extra"]);
-            $this->logger->notice(sprintf("%d Gitlab user(s) disabled.", $usersSync["extraNum"] = count($usersSync["extra"])));
-
-            // Update users of which were already in both Gitlab and the directory
-            foreach ($usersSync["found"] as $gitlabUserId => $gitlabUserName) {
-                if ((isset($usersSync["new"][$gitlabUserId]) && is_array($usersSync["new"][$gitlabUserId])) || (isset($usersSync["extra"][$gitlabUserId]) && is_array($usersSync["extra"][$gitlabUserId]))) {
-                    continue;
-                }
-
-                if ("root" === $gitlabUserName) {
-                    $this->logger->info("Gitlab built-in root user will be ignored.");
-                    continue; // The Gitlab root user should never be updated from LDAP.
-                }
-
-                if (in_array($gitlabUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
-                    $this->logger->info(sprintf("User \"%s\" in ignore list.", $gitlabUserName));
-                    continue;
-                }
-
-                $this->logger->info(sprintf("Directory user \"%s\" changes will be updated.", $gitlabUserName));
-                $gitlabUser = null;
-
-                if (!isset($ldapUsers[$gitlabUserName]) || !is_array($ldapUsers[$gitlabUserName]) || count($ldapUsers[$gitlabUserName]) < 4) {
-                    $this->logger->error(sprintf("Gitlab user \"%s\" has no LDAP details available. This should not happen!", $gitlabUserName));
-                    continue;
-                }
-                $ldapUserDetails = $ldapUsers[$gitlabUserName];
-
-                !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->update($gitlabUserId, [
-                    // "username"          => $gitlabUserName,
-                    // No point updating that. ^
-                    // If the UID changes so will that bit of the DN anyway, so this can't be detected with a custom attribute containing the Gitlab user ID written back to user's LDAP object.
-                    "name"              => $ldapUserDetails["fullName"],
-                    "extern_uid"        => $ldapUserDetails["dn"],
-                    "provider"          => $gitlabConfig["ldapServerName"],
-                    "public_email"      => $ldapUserDetails["email"],
-                    "admin"             => $ldapUserDetails["isAdmin"],
-                    "can_create_group"  => $ldapUserDetails["isAdmin"],
-                    "skip_confirmation" => true,
-                    "external"          => $ldapUserDetails["isExternal"],
-                ])) : $this->logger->warning("Operation skipped due to dry run.");
-
-                $usersSync["sync"][$gitlabUserId] = $gitlabUserName;
-            }
-
-            asort($usersSync["sync"]);
-            $this->logger->notice(sprintf("%d Gitlab user(s) updated.", $usersSync["syncNum"] = count($usersSync["sync"])));
-        } else {
-            $this->logger->error("Gitlab users query failed.");
         }
+
+        asort($usersSync["found"]);
+        $this->logger->notice(sprintf("%d Gitlab user(s) found.", $usersSync["foundNum"] = count($usersSync["found"])));
+
+        // Create directory users of which don't exist in Gitlab
+        $this->logger->notice("Creating directory users of which don't exist in Gitlab...");
+        foreach ($ldapUsers as $ldapUserName => $ldapUserDetails) {
+            if ("root" == $ldapUserName) {
+                $this->logger->info("Gitlab built-in root user will be ignored.");
+                continue; // The Gitlab root user should never be updated from LDAP.
+            }
+
+            if ($this->in_array_i($ldapUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
+                $this->logger->info(sprintf("User \"%s\" in ignore list.", $ldapUserName));
+                continue;
+            }
+
+            $gitlabUserName = trim($ldapUserName);
+            if ($this->in_array_i($gitlabUserName, $usersSync["found"])) {
+                continue;
+            }
+
+            $this->logger->info(sprintf("Directory user \"%s\" is not in Gitlab.", $ldapUserName));
+
+            $this->logger->info(sprintf("Creating Gitlab user \"%s\" [%s].", $gitlabUserName, $ldapUserDetails["dn"]));
+            $gitlabUser = null;
+
+            $gitlabUserPassword = $this->generateRandomPassword(12);
+            $this->logger->debug(sprintf("Password for Gitlab user \"%s\" [%s] will be: %s", $gitlabUserName, $ldapUserDetails["dn"], $gitlabUserPassword));
+
+            !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->create($ldapUserDetails["email"], $gitlabUserPassword, [
+                "username"          => $gitlabUserName,
+                "reset_password"    => false,
+                "name"              => $ldapUserDetails["fullName"],
+                "extern_uid"        => $ldapUserDetails["dn"],
+                "provider"          => $gitlabConfig["ldapServerName"],
+                "public_email"      => $ldapUserDetails["email"],
+                "admin"             => $ldapUserDetails["isAdmin"],
+                "can_create_group"  => $ldapUserDetails["isAdmin"],
+                "skip_confirmation" => true,
+                "external"          => $ldapUserDetails["isExternal"],
+            ])) : $this->logger->warning("Operation skipped due to dry run.");
+
+            $gitlabUserId = (is_array($gitlabUser) && isset($gitlabUser["id"]) && is_int($gitlabUser["id"])) ? $gitlabUser["id"] : sprintf("dry:%s", $ldapUserDetails["dn"]);
+            $usersSync["new"][$gitlabUserId] = $gitlabUserName;
+        }
+
+        asort($usersSync["new"]);
+        $this->logger->notice(sprintf("%d Gitlab user(s) created.", $usersSync["newNum"] = count($usersSync["new"])));
+
+        // Disable Gitlab users of which don't exist in directory
+        $this->logger->notice("Disabling Gitlab users of which don't exist in directory...");
+        foreach ($usersSync["found"] as $gitlabUserId => $gitlabUserName) {
+            if ("root" == $gitlabUserName) {
+                $this->logger->info("Gitlab built-in root user will be ignored.");
+                continue; // The Gitlab root user should never be updated from LDAP.
+            }
+
+            if ($this->in_array_i($gitlabUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
+                $this->logger->info(sprintf("User \"%s\" in ignore list.", $gitlabUserName));
+                continue;
+            }
+
+            if (isset($ldapUsers[$gitlabUserName]) && is_array($ldapUsers[$gitlabUserName])) {
+                continue;
+            }
+
+            $this->logger->info(sprintf("Gitlab user \"%s\" is not in directory.", $gitlabUserName));
+
+            $this->logger->warning(sprintf("Disabling Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
+            $gitlabUser = null;
+
+            !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->block($gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
+            !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->update($gitlabUserId, [
+                "admin"             => false,
+                "can_create_group"  => false,
+                "external"          => true,
+            ])) : $this->logger->warning("Operation skipped due to dry run.");
+
+            $usersSync["extra"][$gitlabUserId] = $gitlabUserName;
+        }
+
+        asort($usersSync["extra"]);
+        $this->logger->notice(sprintf("%d Gitlab user(s) disabled.", $usersSync["extraNum"] = count($usersSync["extra"])));
+
+        // Update users of which were already in both Gitlab and the directory
+        $this->logger->notice("Updating users of which were already in both Gitlab and the directory...");
+        foreach ($usersSync["found"] as $gitlabUserId => $gitlabUserName) {
+            if ((isset($usersSync["new"][$gitlabUserId]) && is_array($usersSync["new"][$gitlabUserId])) || (isset($usersSync["extra"][$gitlabUserId]) && is_array($usersSync["extra"][$gitlabUserId]))) {
+                continue;
+            }
+
+            if ("root" == $gitlabUserName) {
+                $this->logger->info("Gitlab built-in root user will be ignored.");
+                continue; // The Gitlab root user should never be updated from LDAP.
+            }
+
+            if ($this->in_array_i($gitlabUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
+                $this->logger->info(sprintf("User \"%s\" in ignore list.", $gitlabUserName));
+                continue;
+            }
+
+            $this->logger->info(sprintf("Directory user \"%s\" changes will be updated.", $gitlabUserName));
+            $gitlabUser = null;
+
+            if (!isset($ldapUsers[$gitlabUserName]) || !is_array($ldapUsers[$gitlabUserName]) || count($ldapUsers[$gitlabUserName]) < 4) {
+                $this->logger->error(sprintf("Gitlab user \"%s\" has no LDAP details available. This should not happen!", $gitlabUserName));
+                continue;
+            }
+            $ldapUserDetails = $ldapUsers[$gitlabUserName];
+
+            !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->update($gitlabUserId, [
+                // "username"          => $gitlabUserName,
+                // No point updating that. ^
+                // If the UID changes so will that bit of the DN anyway, so this can't be detected with a custom attribute containing the Gitlab user ID written back to user's LDAP object.
+                "reset_password"    => false,
+                "name"              => $ldapUserDetails["fullName"],
+                "extern_uid"        => $ldapUserDetails["dn"],
+                "provider"          => $gitlabConfig["ldapServerName"],
+                "public_email"      => $ldapUserDetails["email"],
+                "admin"             => $ldapUserDetails["isAdmin"],
+                "can_create_group"  => $ldapUserDetails["isAdmin"],
+                "skip_confirmation" => true,
+                "external"          => $ldapUserDetails["isExternal"],
+            ])) : $this->logger->warning("Operation skipped due to dry run.");
+
+            $usersSync["sync"][$gitlabUserId] = $gitlabUserName;
+        }
+
+        asort($usersSync["sync"]);
+        $this->logger->notice(sprintf("%d Gitlab user(s) updated.", $usersSync["syncNum"] = count($usersSync["sync"])));
         // >> Handle users
 
         // << Handle groups
-        if (is_array($gitlabGroups = $gitlab->api("groups")->all())) {
-            $groupsSync = [
-                "found"     => [],  // All existing Gitlab groups
+        $groupsSync = [
+            "found"     => [],  // All existing Gitlab groups
+            "foundNum"  => 0,
+            "new"       => [],  // Groups in LDAP but not Gitlab
+            "newNum"    => 0,
+            "extra"     => [],  // Groups in Gitlab but not LDAP
+            "extraNum"  => 0,
+            "sync"      => [],  // Groups in both LDAP and Gitlab
+            "syncNum"   => 0,
+        ];
+
+        // Find all existing Gitlab groups
+        $this->logger->notice("Finding all existing Gitlab groups...");
+        $p = 0;
+
+        while (is_array($gitlabGroups = $gitlab->api("groups")->all(["page" => ++$p, "per_page" => 100, "all_available" => true])) && count($gitlabGroups) >= 1) {
+            foreach ($gitlabGroups as $i => $gitlabGroup) {
+                $n = $i + 1;
+
+                if (!is_array($gitlabGroup)) {
+                    $this->logger->error(sprintf("Group #%d: Not an array.", $n));
+                    continue;
+                }
+
+                if (!isset($gitlabGroup["id"])) {
+                    $this->logger->error(sprintf("Group #%d: Missing ID.", $n));
+                    continue;
+                }
+
+                if (!$gitlabGroupId = intval($gitlabGroup["id"])) {
+                    $this->logger->error(sprintf("Group #%d: Empty ID.", $n));
+                    continue;
+                }
+
+                if (!isset($gitlabGroup["name"])) {
+                    $this->logger->error(sprintf("Group #%d: Missing name.", $n));
+                    continue;
+                }
+
+                if (!$gitlabGroupName = trim($gitlabGroup["name"])) {
+                    $this->logger->error(sprintf("Group #%d: Empty name.", $n));
+                    continue;
+                }
+
+                /* Not sure if these groups actually need to be exempt yet.
+                if ("Root" == $gitlabGroupName) {
+                    $this->logger->info("Gitlab built-in root group will be ignored.");
+                    continue; // The Gitlab root group should never be updated from LDAP.
+                }
+
+                if ("Users" == $gitlabGroupName) {
+                    $this->logger->info("Gitlab built-in users group will be ignored.");
+                    continue; // The Gitlab users group should never be updated from LDAP.
+                }
+                 */
+
+                $this->logger->info(sprintf("Found Gitlab group #%d \"%s\".", $gitlabGroupId, $gitlabGroupName));
+                if (isset($groupsSync["found"][$gitlabGroupId]) || $this->in_array_i($gitlabGroupName, $groupsSync["found"])) {
+                    $this->logger->warning(sprintf("Duplicate Gitlab group #%d \"%s\".", $gitlabGroupId, $gitlabGroupName));
+                    continue;
+                }
+
+                $groupsSync["found"][$gitlabGroupId] = $gitlabGroupName;
+            }
+        }
+
+        asort($groupsSync["found"]);
+        $this->logger->notice(sprintf("%d Gitlab group(s) found.", $groupsSync["foundNum"] = count($groupsSync["found"])));
+
+        // Create directory groups of which don't exist in Gitlab
+        $this->logger->notice("Creating directory groups of which don't exist in Gitlab...");
+        foreach ($ldapGroupsSafe as $ldapGroupName => $ldapGroupMembers) {
+            /* Not sure if these groups actually need to be exempt yet.
+            if ("Root" == $ldapGroupName) {
+                $this->logger->info("Gitlab built-in root group will be ignored.");
+                continue; // The Gitlab root group should never be updated from LDAP.
+            }
+
+            if ("Users" == $ldapGroupName) {
+                $this->logger->info("Gitlab built-in users group will be ignored.");
+                continue; // The Gitlab users group should never be updated from LDAP.
+            }
+             */
+
+            if ($this->in_array_i($ldapGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
+                $this->logger->info(sprintf("Group \"%s\" in ignore list.", $ldapGroupName));
+                continue;
+            }
+
+            $gitlabGroupName = $slugifyGitlabName->slugify($ldapGroupName);
+            $gitlabGroupPath = $slugifyGitlabPath->slugify($ldapGroupName);
+            if ($this->in_array_i($gitlabGroupName, $groupsSync["found"])) {
+                continue;
+            }
+
+            $this->logger->info(sprintf("Directory group \"%s\" is not in Gitlab.", $gitlabGroupName));
+
+            if ((is_array($ldapGroupMembers) && 1 <= count($ldapGroupMembers)) || $config["gitlab"]["options"]["createEmptyGroups"]) {
+                $this->logger->warning(sprintf("Not creating Gitlab group \"%s\" [%s]: No members in directory group, or config gitlab->options->createEmptyGroups is disabled.", $gitlabGroupName, $gitlabGroupPath));
+                continue;
+            }
+
+            $this->logger->info(sprintf("Creating Gitlab group \"%s\" [%s].", $gitlabGroupName, $gitlabGroupPath));
+            $gitlabGroup = null;
+
+            !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->create($gitlabGroupName, $gitlabGroupPath)) : $this->logger->warning("Operation skipped due to dry run.");
+
+            $gitlabGroupId = (is_array($gitlabGroup) && isset($gitlabGroup["id"]) && is_int($gitlabGroup["id"])) ? $gitlabGroup["id"] : sprintf("dry:%s", $gitlabGroupPath);
+            $groupsSync["new"][$gitlabGroupId] = $gitlabGroupName;
+        }
+
+        asort($groupsSync["new"]);
+        $this->logger->notice(sprintf("%d Gitlab group(s) created.", $groupsSync["newNum"] = count($groupsSync["new"])));
+
+        // Delete Gitlab groups of which don't exist in directory
+        $this->logger->notice("Deleting Gitlab groups of which don't exist in directory...");
+        foreach ($groupsSync["found"] as $gitlabGroupId => $gitlabGroupName) {
+            /* Not sure if these groups actually need to be exempt yet.
+            if ("Root" == $gitlabGroupName) {
+                $this->logger->info("Gitlab built-in root group will be ignored.");
+                continue; // The Gitlab root group should never be updated from LDAP.
+            }
+
+            if ("Users" == $gitlabGroupName) {
+                $this->logger->info("Gitlab built-in users group will be ignored.");
+                continue; // The Gitlab users group should never be updated from LDAP.
+            }
+             */
+
+            if ($this->in_array_i($gitlabGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
+                $this->logger->info(sprintf("Group \"%s\" in ignore list.", $gitlabGroupName));
+                continue;
+            }
+
+
+            if ($this->array_key_exists_i($gitlabGroupName, $ldapGroupsSafe)) {
+                continue;
+            }
+
+            $this->logger->info(sprintf("Gitlab group \"%s\" is not in directory.", $gitlabGroupName));
+
+            $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
+            if ((is_array($ldapGroupMembers) && 1 <= count($ldapGroupMembers)) || !$config["gitlab"]["options"]["deleteExtraGroups"]) {
+                $this->logger->info(sprintf("Not deleting Gitlab group #%d \"%s\" [%s]: Has members in directory group, or config gitlab->options->deleteExtraGroups is disabled.", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
+                continue;
+            }
+
+            $this->logger->warning(sprintf("Deleting Gitlab group #%d \"%s\" [%s].", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
+            $gitlabGroup = null;
+
+            !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->remove($gitlabGroupId)) : $this->logger->warning("Operation skipped due to dry run.");
+
+            $groupsSync["extra"][$gitlabGroupId] = $gitlabGroupName;
+        }
+
+        asort($groupsSync["extra"]);
+        $this->logger->notice(sprintf("%d Gitlab group(s) deleted.", $groupsSync["extraNum"] = count($groupsSync["extra"])));
+
+        // Update groups of which were already in both Gitlab and the directory
+        $this->logger->notice("Updating groups of which were already in both Gitlab and the directory...");
+        foreach ($groupsSync["found"] as $gitlabGroupId => $gitlabGroupName) {
+            if ((isset($groupsSync["new"][$gitlabGroupId]) && is_array($groupsSync["new"][$gitlabGroupId])) || (isset($groupsSync["extra"][$gitlabGroupId]) && is_array($groupsSync["extra"][$gitlabGroupId]))) {
+                continue;
+            }
+
+            /* Not sure if these groups actually need to be exempt yet.
+            if ("Root" == $gitlabGroupName) {
+                $this->logger->info("Gitlab built-in root group will be ignored.");
+                continue; // The Gitlab root group should never be updated from LDAP.
+            }
+
+            if ("Users" == $gitlabGroupName) {
+                $this->logger->info("Gitlab built-in users group will be ignored.");
+                continue; // The Gitlab users group should never be updated from LDAP.
+            }
+             */
+
+            if ($this->in_array_i($gitlabGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
+                $this->logger->info(sprintf("Group \"%s\" in ignore list.", $gitlabGroupName));
+                continue;
+            }
+
+            $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
+
+            $this->logger->info(sprintf("Directory group \"%s\" changes will be updated.", $gitlabGroupName));
+            $gitlabGroup = null;
+
+            if (!isset($ldapGroupsSafe[$gitlabGroupName]) || !is_array($ldapGroupsSafe[$gitlabGroupName])) {
+                $this->logger->error(sprintf("Gitlab group \"%s\" has no LDAP details available. This should not happen!", $gitlabGroupName));
+                continue;
+            }
+            $ldapGroupMembers = $ldapGroupsSafe[$gitlabGroupName];
+
+            !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->update($gitlabGroupId, [
+                // "name"              => $gitlabGroupName,
+                // No point updating that. ^
+                // If the CN changes so will that bit of the DN anyway, so this can't be detected with a custom attribute containing the Gitlab group ID written back to group's LDAP object.
+                "path"              => $gitlabGroupPath,
+            ])) : $this->logger->warning("Operation skipped due to dry run.");
+
+            $groupsSync["sync"][$gitlabGroupId] = $gitlabGroupName;
+        }
+
+        asort($groupsSync["sync"]);
+        $this->logger->notice(sprintf("%d Gitlab group(s) updated.", $groupsSync["syncNum"] = count($groupsSync["sync"])));
+        // >> Handle groups
+
+        // << Handle group memberships
+        $groupsToSyncMembership = ($groupsSync["found"] + $groupsSync["new"] + $groupsSync["sync"]);
+        asort($groupsToSyncMembership);
+        $this->logger->notice(sprintf("%d Gitlab group(s) to have their members synchronised.", $groupsToSyncMembershipNum = count($groupsToSyncMembership)));
+
+        $this->logger->notice("Synchronising Gitlab group members with directory group members...");
+        foreach ($groupsToSyncMembership as $gitlabGroupId => $gitlabGroupName) {
+            /* Not sure if these groups actually need to be exempt yet.
+            if ("Root" == $gitlabGroupName) {
+                $this->logger->info("Gitlab built-in root group will be ignored.");
+                continue; // The Gitlab root group should never be updated from LDAP.
+            }
+
+            if ("Users" == $gitlabGroupName) {
+                $this->logger->info("Gitlab built-in users group will be ignored.");
+                continue; // The Gitlab users group should never be updated from LDAP.
+            }
+             */
+
+            if ($this->in_array_i($gitlabGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
+                $this->logger->info(sprintf("Group \"%s\" in ignore list.", $gitlabGroupName));
+                continue;
+            }
+
+            $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
+
+            $userGroupMembershipsSync = [
+                "found"     => [],
                 "foundNum"  => 0,
-                "new"       => [],  // Groups in LDAP but not Gitlab
+                "new"       => [],
                 "newNum"    => 0,
-                "extra"     => [],  // Groups in Gitlab but not LDAP
+                "extra"     => [],
                 "extraNum"  => 0,
-                "sync"      => [],  // Groups in both LDAP and Gitlab
+                "sync"      => [],
                 "syncNum"   => 0,
             ];
 
-            // Find all existing Gitlab groups
-            if ($gitlabGroupsNum = count($gitlabGroups)) {
-                $this->logger->notice(sprintf("%d Gitlab group(s) found.", $gitlabGroupsNum));
+            $this->logger->notice(sprintf("Synchronising members for group \"%s\" [%s]...", $gitlabGroupName, $gitlabGroupPath));
 
-                foreach ($gitlabGroups as $i => $gitlabGroup) {
-                    $n = $i + 1;
-
-                    if (!is_array($gitlabGroup)) {
-                        $this->logger->error(sprintf("Group #%d: Not an array.", $n));
-                        var_dump($gitlabGroup);
-                        continue;
-                    }
-
-                    if (!isset($gitlabGroup["id"])) {
-                        $this->logger->error(sprintf("Group #%d: Missing ID.", $n));
-                        continue;
-                    }
-
-                    if (!$gitlabGroupId = intval($gitlabGroup["id"])) {
-                        $this->logger->error(sprintf("Group #%d: Empty ID.", $n));
-                        continue;
-                    }
-
-                    if (!isset($gitlabGroup["name"])) {
-                        $this->logger->error(sprintf("Group #%d: Missing name.", $n));
-                        continue;
-                    }
-
-                    if (!$gitlabGroupName = trim($gitlabGroup["name"])) {
-                        $this->logger->error(sprintf("Group #%d: Empty name.", $n));
-                        continue;
-                    }
-
-                    $this->logger->info(sprintf("Found Gitlab group #%d \"%s\".", $gitlabGroupId, $gitlabGroupName));
-                    if (array_key_exists($gitlabGroupId, $groupsSync["found"]) || in_array($gitlabGroupName, $groupsSync["found"])) {
-                        $this->logger->warning(sprintf("Duplicate Gitlab group #%d \"%s\".", $gitlabGroupId, $gitlabGroupName));
-                        continue;
-                    }
-
-                    $groupsSync["found"][$gitlabGroupId] = $gitlabGroupName;
-                }
-
-                asort($groupsSync["found"]);
-                $this->logger->notice(sprintf("%d Gitlab groups(s) recognised.", $groupsSync["foundNum"] = count($groupsSync["found"])));
-            } else {
-                $this->logger->warning("No Gitlab groups found.");
-            }
-
-            // Create directory groups of which don't exist in Gitlab
-            $this->logger->notice("Creating directory groups of which don't exist in Gitlab...");
-            foreach ($ldapGroups as $ldapGroupName => $ldapGroupMembers) {
-                if (in_array($ldapGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
-                    $this->logger->info(sprintf("Group \"%s\" in ignore list.", $ldapGroupName));
-                    continue;
-                }
-
-                $gitlabGroupName = $slugifyGitlabName->slugify($ldapGroupName);
-                $gitlabGroupPath = $slugifyGitlabPath->slugify($ldapGroupName);
-
-                if (!in_array($gitlabGroupName, $groupsSync["found"])) {
-                    $this->logger->info(sprintf("Directory group \"%s\" is not in Gitlab.", $ldapGroupName));
-
-                    if ((is_array($ldapGroupMembers) && 1 <= count($ldapGroupMembers)) || $config["gitlab"]["options"]["createEmptyGroups"]) {
-                        $this->logger->info(sprintf("Creating Gitlab group \"%s\" [%s].", $gitlabGroupName, $gitlabGroupPath));
-                        $gitlabGroup = null;
-                        !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->create($gitlabGroupName, $gitlabGroupPath)) : $this->logger->warning("Operation skipped due to dry run.");
-                        $gitlabGroupId = (is_array($gitlabGroup) && isset($gitlabGroup["id"]) && is_int($gitlabGroup["id"])) ? $gitlabGroup["id"] : sprintf("dry:%s", $gitlabGroupPath);
-
-                        $groupsSync["new"][$gitlabGroupId] = $gitlabGroupName;
-                    } else {
-                        $this->logger->warning(sprintf("Not creating Gitlab group \"%s\" [%s]: No members in directory group, or config gitlab->options->createEmptyGroups is disabled.", $gitlabGroupName, $gitlabGroupPath));
-                    }
-                }
-            }
-
-            asort($groupsSync["new"]);
-            $this->logger->notice(sprintf("%d Gitlab groups(s) created.", $groupsSync["newNum"] = count($groupsSync["new"])));
-
-            // Delete Gitlab groups of which don't exist in directory
-            $this->logger->notice("Deleting Gitlab groups of which don't exist in directory...");
-            foreach ($groupsSync["found"] as $gitlabGroupId => $gitlabGroupName) {
-                if (in_array($gitlabGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
-                    $this->logger->info(sprintf("Group \"%s\" in ignore list.", $gitlabGroupName));
-                    continue;
-                }
-
-                $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
-
-                if (!in_array($gitlabGroupName, $ldapGroups)) {
-                    $this->logger->info(sprintf("Gitlab group \"%s\" is not in directory.", $gitlabGroupName));
-
-                    if ((is_array($ldapGroupMembers) && 1 <= count($ldapGroupMembers)) || !$config["gitlab"]["options"]["deleteExtraGroups"]) {
-                        $this->logger->info(sprintf("Not deleting Gitlab group #%d \"%s\" [%s]: Has members in directory group, or config gitlab->options->deleteExtraGroups is disabled.", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
-                    } else {
-                        $this->logger->warning(sprintf("Deleting Gitlab group #%d \"%s\" [%s].", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
-
-                        !$this->dryRun ? $gitlab->api("groups")->remove($gitlabGroupId) : $this->logger->warning("Operation skipped due to dry run.");
-                        $groupsSync["extra"][$gitlabGroupId] = $ldapGroupName;
-                    }
-                }
-            }
-
-            asort($groupsSync["extra"]);
-            $this->logger->notice(sprintf("%d Gitlab groups(s) deleted.", $groupsSync["extraNum"] = count($groupsSync["extra"])));
-
-            // << Sync group members
-            $this->logger->notice("Synchronising Gitlab group members with directory group members...");
-            sort($groupsSync["sync"]);
-            $this->logger->notice(sprintf("%d Gitlab groups(s) to be synchronised.", $groupsSync["syncNum"] = count($groupsSync["sync"])));
-
-            // This won't be basec on ["sync"] shortly...
-            foreach ($groupsSync["sync"] as $gitlabGroupId => $gitlabGroupName) {
-                if (in_array($gitlabGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
-                    $this->logger->info(sprintf("Group \"%s\" in ignore list.", $gitlabGroupName));
-                    continue;
-                }
-
-                $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
-
-                $userGroupMembershipsSync = [
-                    "found"     => [],
-                    "foundNum"  => 0,
-                    "new"       => [],
-                    "newNum"    => 0,
-                    "extra"     => [],
-                    "extraNum"  => 0,
-                    "sync"      => [],
-                    "syncNum"   => 0,
-                ];
-
-                $this->logger->notice(sprintf("Synchronising members for group \"%s\" [%s]...", $gitlabGroupName, $gitlabGroupPath));
-
-                // blah blah blah
-            }
-            // >> Sync group members
-        } else {
-            $this->logger->error("Gitlab groups query failed.");
+            // blah blah blah
         }
-        // >> Handle groups
+        // >> Handle group memberships
 
         // Disconnect
         $this->logger->debug("Gitlab: Unbinding");
         $gitlab = null;
 
         $this->logger->notice("Gitlab connection closed.");
+    }
+
+    /**
+     * Case-insensitive `in_array()`.
+     * @param  mixed $needle
+     * @param  array $haystack
+     * @return bool
+     */
+    private function in_array_i($needle, array $haystack): bool
+    {
+        return in_array(strtolower($needle), array_map("strtolower", $haystack));
+    }
+
+    /**
+     * Case insensitive `array_key_exists()`.
+     * @param  mixed $key
+     * @param  array $haystack
+     * @return bool
+     */
+    private function array_key_exists_i($key, array $haystack): bool
+    {
+        $key = strtolower($key);
+
+        foreach (array_change_key_case($haystack, CASE_LOWER) as $k => $v) {
+            if ($k === $key) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Generate a random password.
+     * @param  int    $length Length
+     * @return string         Password
+     */
+    private function generateRandomPassword(int $length): string
+    {
+        if ($length < 1) {
+            throw new \Exception("Length must be at least 1.");
+        }
+
+        $password   = "";
+        $chars      = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`¬!\$%^&*()-_=+,<.>;:'@#~[]{}?";
+        $charsNum   = strlen($chars);
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $chars[random_int(0, $charsNum - 1)];
+        }
+
+        return $password;
     }
 }
