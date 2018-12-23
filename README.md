@@ -63,7 +63,7 @@ Default: *false*
 
 #### server
 
-This sub-section configures how to connect to your LDAP server. Most of this follows [Symfony's LDAP component](https://symfony.com/doc/current/components/ldap.html).
+This sub-section configures how to connect to your LDAP server.
 
 ##### host *(string)*
 
