@@ -71,7 +71,7 @@ IP or hostname of the LDAP server. You should use "localhost" if the you're runn
 
 ##### port *(int\null)*
 
-Port used to access the LDAP server. Typically 389 for unencrypted connections or STARTTLS encrypted connections, but 636 for implicit SSL/TLS connections.
+TCP port used to access the LDAP server. Typically 389 for unencrypted connections or STARTTLS encrypted connections, but 636 for implicit SSL/TLS connections.
 
 Leaving this null will use the default port based on the **encryption** setting.
 
@@ -85,11 +85,13 @@ Leaving this null will assume version 3.
 
 The encryption protocol.
 
-* "none" for unencrypted connections, usually port 389. (Generally only safe to use with "localhost" or a very tightly controlled link between this tool and the LDAP server.)
-* "tls" for **explicit** SSL/TLS connections, usually on port 389. (Often called "STARTTLS".)
-* "ssl" for **implicit** SSL/TLS connections, usually on port 636. (Often called "LDAPS".)
+* "none" for unencrypted connections, usually via TCP port 389. (Generally only safe to use with "localhost" or a very tightly controlled tunnel between this tool and the LDAP server.)
+* "tls" for **explicit** SSL/TLS connections, usually via TCP port 389. (Often called "STARTTLS".)
+* "ssl" for **implicit** SSL/TLS connections, usually via TCP port 636. (Often called "LDAPS".)
 
 Leaving this null will assume an unencrypted connection.
+
+If the server isn't "localhost" and STARTTLS or LDAPS is unavailable due to whatever certificate issues you have highly consider using an SSH tunnel with port forwarding to make a secure link instead. *(How to do that is beyond the scope of this tool.)*
 
 ##### bindDn *(string|null)*
 
@@ -118,7 +120,7 @@ Example to work with a specific organisational unit tree: "ou=Internal,dc=exampl
 
 Specify the distinguished name containing user objects to be searched for.
 
-* For Microsoft Active Directory this is typically "CN=Users".
+* For Microsoft Active Directory this is typically "cn=Users".
 * For OpenLDAP and 389-DS this is typically "ou=People".
 
 Leaving this null will search the entire base DN.
@@ -156,7 +158,7 @@ Default: "mail"
 
 Specify the distinguished name containing group objects to be searched for.
 
-* For Microsoft Active Directory this is typically "CN=Users".
+* For Microsoft Active Directory this is typically "cn=Users". *(Yes, that really is "Users", not "Groups".)*
 * For OpenLDAP this is typically "ou=Group".
 * For 389-DS this is typically "ou=Groups".
 
@@ -207,13 +209,12 @@ This must be defined as an array even if you have only 1 user. Be sure to quote 
 
 ```
 userNamesToIgnore:
-    - "root"
     - "nobody"
     - "Administrator"
     - "Guest"
 ```
 
-User name "root" must always be ignored because this is the built-in Gitlab root user. Do not attempt to create/sync this user name.
+User name "root" will always be ignored because this is the built-in Gitlab root user. This tool will not attempt to create/delete/sync this user name.
 
 Default: *null*
 
@@ -224,19 +225,18 @@ Specify a list of group names of which this tool should ignore. (Case-insensitiv
 This varies not only according to which directory software you're using, but also how your directory has been structured. You do not have to specify every group if you've left the "createEmptyGroups" setting (further down) switched off, as this will prevent groups containing no users to be ignored anyway.
 
 * For Microsoft Active Directory this is could be "Domain Computers", "Domain Controllers", "DnsAdmins", "DnsUpdateProxy", and any other group you don't expect to contain human users.
-* OpenLDAP and 389-DS do not ship with any groups out of the box.
+* OpenLDAP does ship with any groups out of the box.
+* For 389-DS this could be the four out of the box groups: "Accounting Managers", "HR Managers", "PD Managers", and "QA Managers".
 
 This must be defined as an array even if you have only 1 group. Be sure to quote group names that have spaces. For example:
 
 ```
 groupNamesToIgnore:
-    - "Root"
-    - "Users"
     - "Managed Service Accounts"
     - "Marketing Staff"
 ```
 
-Group names "Root" and "Users" must always be ignored because they are reserved keywords. Do not attempt to create/sync these group names.
+Group names "Root" and "Users" will always be ignored because they are built-in Gitlab groups. This will will not attempt to create/delete/sync these group names.
 
 Default: *null*
 
@@ -244,7 +244,7 @@ Default: *null*
 
 Specify whether groups containing no LDAP users should still be created in Gitlab.
 
-You should enable this if you want to specify permissions for groups in advance, so they'll be ready when the first user is added to that group. If your directory has a lot of empty groups enabling this would only replicate the clutter to Gitlab.
+You should enable this if you want to specify permissions for groups in advance so they'll be ready when the first user is added to that group. If your directory has a lot of empty groups enabling this would only replicate the clutter to Gitlab, so should be used with care for large directories.
 
 Default: *false*
 
@@ -252,9 +252,9 @@ Default: *false*
 
 Specify whether Gitlab groups not found in LDAP should be deleted.
 
-You should only enable this if you don't like empty groups being left over in Gitlab after doing a purge in your directory.
+You should only enable this if you don't like empty groups being left over in Gitlab after doing a purge in your directory. Consider if such groups still contain projects you need to keep. (This scenario remains untested!)
 
-**Only empty Gitlab groups will ever be deleted. If there are extra groups with members still in them they will not be deleted.**
+Only empty Gitlab groups will ever be deleted. If there are extra groups with members still in them they will not be deleted.
 
 Default: *false*
 
@@ -262,7 +262,7 @@ Default: *false*
 
 Specify a list of group names of which members should be granted administrator access.
 
-This varies not only according to which directory software you're using, but also how your directory has been structured. Users that have directory administrator access should not necessarily have Gitlab administrator access too, so this one is up to you.
+This varies not only according to which directory software you're using, but also how your directory has been structured. Users that have directory administrator access may not necessarily have Gitlab administrator access too, so this one is up to you.
 
 * For Microsoft Active Directory this is could be "Domain Admins" and "Enterprise Admins".
 * OpenLDAP and 389-DS do not ship with such a group out of the box as they typically offer a "Directory Administrator" non-user object or similar for administrative purposes via bind DN.
