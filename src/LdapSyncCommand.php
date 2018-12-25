@@ -1425,7 +1425,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             // Add missing group members
             $this->logger->notice("Adding missing group members...");
             foreach ($membersOfThisGroup as $gitlabUserId => $gitlabUserName) {
-                if ($this->in_array_i($gitlabUserId, $userGroupMembersSync["found"])) {
+                if (isset($userGroupMembersSync["found"][$gitlabUserId]) && $userGroupMembersSync["found"][$gitlabUserId] == $gitlabUserName) {
                     continue;
                 }
 
@@ -1463,11 +1463,11 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             asort($userGroupMembersSync["extra"]);
             $this->logger->notice(sprintf("%d Gitlab group \"%s\" [%s] member(s) deleted.", $userGroupMembersSync["extraNum"] = count($userGroupMembersSync["extra"]), $gitlabGroupName, $gitlabGroupPath));
 
-            /* This isn't needed...
             // Update existing group members
+            /* This isn't needed...
             $this->logger->notice("Updating existing group members...");
-            foreach ($userGroupMembersSync["found"] as $gitlabGroupId => $gitlabGroupName) {
-                if ((isset($userGroupMembersSync["new"][$gitlabGroupId]) && is_array($userGroupMembersSync["new"][$gitlabGroupId])) || (isset($userGroupMembersSync["extra"][$gitlabGroupId]) && is_array($userGroupMembersSync["extra"][$gitlabGroupId]))) {
+            foreach ($userGroupMembersSync["found"] as $gitlabUserId => $gitlabUserName) {
+                if ((isset($userUserMembersSync["new"][$gitlabUserId]) && $userUserMembersSync["new"][$gitlabUserId]) == $gitlabUserName || (isset($userUserMembersSync["extra"][$gitlabUserId]) && $userUserMembersSync["extra"][$gitlabUserId] == $gitlabUserName)) {
                     continue;
                 }
 
