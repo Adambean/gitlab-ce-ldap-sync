@@ -6,22 +6,23 @@ Though this functionality is available out of the box with Gitlab enterprise edi
 
 As a bonus it can also do a light rake of LDAP users not currently in Gitlab, so those that haven't signed in for their first time can still have projects and permissions assigned to them. **This may make the tool unsuitable git Gitlab-EE as this would certainly impact its licensing fees!**
 
-## **THIS TOOL IS NOT COMPLETED YET. DO NOT USE IT IN A PRODUCTION ENVIRONMENT.**
+## **THIS TOOL IS NOT QUALITY ASSURED YET. DO NOT USE IT IN A PRODUCTION ENVIRONMENT.**
 
-**Seriously. Only use this on test Gitlab CE instances.**
+**Seriously.**
 
-What is complete:
+Though all of this tool's features are now implemented, very limited testing has happened, so don't expect a perfect experience. You should therefore only use this on test Gitlab CE instances, or if you must use this on your production environment, at the very least take a backup of your Gitlab data before using this.
+
+Features implemented:
 
 * Reading users from LDAP
 * Reading groups from LDAP
 * Synchronising users to Gitlab
 * Synchronising groups to Gitlab
+* Synchronising Gitlab group memberships based on LDAP group memberships
 
-What is left to-do:
+If in doubt use the dry run `-d` option to prevent writing to Gitlab first, combined with `-vv` to see exactly what would happen.
 
-* Synchronising group memberships to Gitlab
-
-**If in doubt use the dry run `-d` option to prevent writing to Gitlab first, combined with `-vv` to see exactly what would happen. You have been warned.**
+**You have been warned!**
 
 ## Getting Started
 
@@ -257,6 +258,20 @@ You should only enable this if you don't like empty groups being left over in Gi
 Only empty Gitlab groups will ever be deleted. If there are extra groups with members still in them they will not be deleted.
 
 Default: *false*
+
+##### newMemberAccessLevel *(integer|null)*
+
+The access level to provide users when added to groups.
+
+* 10: Guest
+* 20: Reporter
+* 30: Developer
+* 40: Maintainer
+* 50: Owner
+
+This will not interfere with existing group members, so you can adjust user permissions in Gitlab later on.
+
+Default: 30
 
 ##### groupNamesOfAdministrators *(array|null)*
 

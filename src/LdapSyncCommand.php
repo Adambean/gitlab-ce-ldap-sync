@@ -480,6 +480,16 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $addProblem("error", "gitlab->options->deleteExtraGroups is not a boolean.");
                 }
 
+                if (!array_key_exists("newMemberAccessLevel", $config["gitlab"]["options"])) {
+                    $addProblem("warning", "gitlab->options->newMemberAccessLevel missing. (Assuming 30.)");
+                    $config["gitlab"]["options"]["newMemberAccessLevel"] = 30;
+                } else if (null === $config["gitlab"]["options"]["newMemberAccessLevel"]) {
+                    $addProblem("warning", "gitlab->options->newMemberAccessLevel not specified. (Assuming 30.)");
+                    $config["gitlab"]["options"]["newMemberAccessLevel"] = 30;
+                } else if (!is_int($config["gitlab"]["options"]["newMemberAccessLevel"])) {
+                    $addProblem("error", "gitlab->options->newMemberAccessLevel is not an integer.");
+                }
+
                 if (!array_key_exists("groupNamesOfAdministrators", $config["gitlab"]["options"])) {
                     // $addProblem("warning", "gitlab->options->groupNamesOfAdministrators missing. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesOfAdministrators"] = [];
@@ -919,8 +929,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             "newNum"    => 0,
             "extra"     => [],  // Users in Gitlab but not LDAP
             "extraNum"  => 0,
-            "sync"      => [],  // Users in both LDAP and Gitlab
-            "syncNum"   => 0,
+            "update"    => [],  // Users in both LDAP and Gitlab
+            "updateNum" => 0,
         ];
 
         // Find all existing Gitlab users
@@ -992,8 +1002,6 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
-            $this->logger->info(sprintf("Directory user \"%s\" is not in Gitlab.", $ldapUserName));
-
             $this->logger->info(sprintf("Creating Gitlab user \"%s\" [%s].", $gitlabUserName, $ldapUserDetails["dn"]));
             $gitlabUser = null;
 
@@ -1037,8 +1045,6 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
-            $this->logger->info(sprintf("Gitlab user \"%s\" is not in directory.", $gitlabUserName));
-
             $this->logger->warning(sprintf("Disabling Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
             $gitlabUser = null;
 
@@ -1072,7 +1078,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
-            $this->logger->info(sprintf("Directory user \"%s\" changes will be updated.", $gitlabUserName));
+            $this->logger->info(sprintf("Updating Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
             $gitlabUser = null;
 
             if (!isset($ldapUsers[$gitlabUserName]) || !is_array($ldapUsers[$gitlabUserName]) || count($ldapUsers[$gitlabUserName]) < 4) {
@@ -1096,11 +1102,11 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 "external"          => $ldapUserDetails["isExternal"],
             ])) : $this->logger->warning("Operation skipped due to dry run.");
 
-            $usersSync["sync"][$gitlabUserId] = $gitlabUserName;
+            $usersSync["update"][$gitlabUserId] = $gitlabUserName;
         }
 
-        asort($usersSync["sync"]);
-        $this->logger->notice(sprintf("%d Gitlab user(s) updated.", $usersSync["syncNum"] = count($usersSync["sync"])));
+        asort($usersSync["update"]);
+        $this->logger->notice(sprintf("%d Gitlab user(s) updated.", $usersSync["updateNum"] = count($usersSync["update"])));
         // >> Handle users
 
         // << Handle groups
@@ -1111,8 +1117,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             "newNum"    => 0,
             "extra"     => [],  // Groups in Gitlab but not LDAP
             "extraNum"  => 0,
-            "sync"      => [],  // Groups in both LDAP and Gitlab
-            "syncNum"   => 0,
+            "update"    => [],  // Groups in both LDAP and Gitlab
+            "updateNum" => 0,
         ];
 
         // Find all existing Gitlab groups
@@ -1148,6 +1154,11 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     continue;
                 }
 
+                if (!$gitlabGroupPath = trim($gitlabGroup["path"])) {
+                    $this->logger->error(sprintf("Group #%d: Empty path.", $n));
+                    continue;
+                }
+
                 /* Not sure if these groups actually need to be exempt yet.
                 if ("Root" == $gitlabGroupName) {
                     $this->logger->info("Gitlab built-in root group will be ignored.");
@@ -1160,9 +1171,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 }
                  */
 
-                $this->logger->info(sprintf("Found Gitlab group #%d \"%s\".", $gitlabGroupId, $gitlabGroupName));
+                $this->logger->info(sprintf("Found Gitlab group #%d \"%s\" [%s].", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                 if (isset($groupsSync["found"][$gitlabGroupId]) || $this->in_array_i($gitlabGroupName, $groupsSync["found"])) {
-                    $this->logger->warning(sprintf("Duplicate Gitlab group #%d \"%s\".", $gitlabGroupId, $gitlabGroupName));
+                    $this->logger->warning(sprintf("Duplicate Gitlab group %d \"%s\" [%s].", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                     continue;
                 }
 
@@ -1198,8 +1209,6 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             if ($this->in_array_i($gitlabGroupName, $groupsSync["found"])) {
                 continue;
             }
-
-            $this->logger->info(sprintf("Directory group \"%s\" is not in Gitlab.", $gitlabGroupName));
 
             if ((is_array($ldapGroupMembers) && 1 <= count($ldapGroupMembers)) || $config["gitlab"]["options"]["createEmptyGroups"]) {
                 $this->logger->warning(sprintf("Not creating Gitlab group \"%s\" [%s]: No members in directory group, or config gitlab->options->createEmptyGroups is disabled.", $gitlabGroupName, $gitlabGroupPath));
@@ -1238,12 +1247,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
-
             if ($this->array_key_exists_i($gitlabGroupName, $ldapGroupsSafe)) {
                 continue;
             }
-
-            $this->logger->info(sprintf("Gitlab group \"%s\" is not in directory.", $gitlabGroupName));
 
             $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
             if ((is_array($ldapGroupMembers) && 1 <= count($ldapGroupMembers)) || !$config["gitlab"]["options"]["deleteExtraGroups"]) {
@@ -1288,7 +1294,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
             $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
 
-            $this->logger->info(sprintf("Directory group \"%s\" changes will be updated.", $gitlabGroupName));
+            $this->logger->info(sprintf("Updating Gitlab group #%d \"%s\" [%s].", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
             $gitlabGroup = null;
 
             if (!isset($ldapGroupsSafe[$gitlabGroupName]) || !is_array($ldapGroupsSafe[$gitlabGroupName])) {
@@ -1304,17 +1310,18 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 "path"              => $gitlabGroupPath,
             ])) : $this->logger->warning("Operation skipped due to dry run.");
 
-            $groupsSync["sync"][$gitlabGroupId] = $gitlabGroupName;
+            $groupsSync["update"][$gitlabGroupId] = $gitlabGroupName;
         }
 
-        asort($groupsSync["sync"]);
-        $this->logger->notice(sprintf("%d Gitlab group(s) updated.", $groupsSync["syncNum"] = count($groupsSync["sync"])));
+        asort($groupsSync["update"]);
+        $this->logger->notice(sprintf("%d Gitlab group(s) updated.", $groupsSync["updateNum"] = count($groupsSync["update"])));
         // >> Handle groups
 
         // << Handle group memberships
-        $groupsToSyncMembership = ($groupsSync["found"] + $groupsSync["new"] + $groupsSync["sync"]);
+        $usersToSyncMembership  = ($usersSync["found"] + $usersSync["new"] + $usersSync["update"]);
+        asort($usersToSyncMembership);
+        $groupsToSyncMembership = ($groupsSync["found"] + $groupsSync["new"] + $groupsSync["update"]);
         asort($groupsToSyncMembership);
-        $this->logger->notice(sprintf("%d Gitlab group(s) to have their members synchronised.", $groupsToSyncMembershipNum = count($groupsToSyncMembership)));
 
         $this->logger->notice("Synchronising Gitlab group members with directory group members...");
         foreach ($groupsToSyncMembership as $gitlabGroupId => $gitlabGroupName) {
@@ -1337,20 +1344,148 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
             $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
 
-            $userGroupMembershipsSync = [
+            $membersOfThisGroup = [];
+            foreach ($usersToSyncMembership as $gitlabUserId => $gitlabUserName) {
+                if (!$this->in_array_i($gitlabUserName, $ldapGroupsSafe[$gitlabGroupName])) {
+                    continue;
+                }
+
+                $membersOfThisGroup[$gitlabUserId] = $gitlabUserName;
+            }
+            asort($membersOfThisGroup);
+            $this->logger->notice(sprintf("Synchronising %d member(s) for group #%d \"%s\" [%s]...", ($membersOfThisGroupNum = count($membersOfThisGroup)), $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
+
+            $userGroupMembersSync = [
                 "found"     => [],
                 "foundNum"  => 0,
                 "new"       => [],
                 "newNum"    => 0,
                 "extra"     => [],
                 "extraNum"  => 0,
-                "sync"      => [],
-                "syncNum"   => 0,
+                "update"    => [],
+                "updateNum" => 0,
             ];
 
-            $this->logger->notice(sprintf("Synchronising members for group \"%s\" [%s]...", $gitlabGroupName, $gitlabGroupPath));
+            // Find existing group members
+            $this->logger->notice("Finding existing group members...");
+            $p = 0;
 
-            // blah blah blah
+            while (is_array($gitlabUsers = $gitlab->api("groups")->members($gitlabGroupId, ["page" => ++$p, "per_page" => 100])) && count($gitlabUsers) >= 1) {
+                foreach ($gitlabUsers as $i => $gitlabUser) {
+                    $n = $i + 1;
+
+                    if (!is_array($gitlabUser)) {
+                        $this->logger->error(sprintf("Group member #%d: Not an array.", $n));
+                        continue;
+                    }
+
+                    if (!isset($gitlabUser["id"])) {
+                        $this->logger->error(sprintf("Group member #%d: Missing ID.", $n));
+                        continue;
+                    }
+
+                    if (!$gitlabUserId = intval($gitlabUser["id"])) {
+                        $this->logger->error(sprintf("Group member #%d: Empty ID.", $n));
+                        continue;
+                    }
+
+                    if (!isset($gitlabUser["username"])) {
+                        $this->logger->error(sprintf("Group member #%d: Missing user name.", $n));
+                        continue;
+                    }
+
+                    if (!$gitlabUserName = trim($gitlabUser["username"])) {
+                        $this->logger->error(sprintf("Group member #%d: Empty user name.", $n));
+                        continue;
+                    }
+
+                    if ("root" == $gitlabUserName) {
+                        $this->logger->info("Gitlab built-in root user will be ignored.");
+                        continue; // The Gitlab root user should never be updated from LDAP.
+                    }
+
+                    if (!isset($membersOfThisGroup[$gitlabUserId]) || $membersOfThisGroup[$gitlabUserId] != $gitlabUserName) {
+                        $this->logger->error(sprintf("Group member #%d: User not found.", $n));
+                        continue;
+                    }
+
+                    $this->logger->info(sprintf("Found Gitlab group member #%d \"%s\".", $gitlabUserId, $gitlabUserName));
+                    if (isset($userGroupMembersSync["found"][$gitlabUserId]) || $this->in_array_i($gitlabUserName, $userGroupMembersSync["found"])) {
+                        $this->logger->warning(sprintf("Duplicate Gitlab group member #%d \"%s\".", $gitlabUserId, $gitlabUserName));
+                        continue;
+                    }
+
+                    $userGroupMembersSync["found"][$gitlabUserId] = $gitlabUserName;
+                }
+            }
+
+            asort($userGroupMembersSync["found"]);
+            $this->logger->notice(sprintf("%d Gitlab group \"%s\" [%s] member(s) found.", $userGroupMembersSync["foundNum"] = count($userGroupMembersSync["found"]), $gitlabGroupName, $gitlabGroupPath));
+
+            // Add missing group members
+            $this->logger->notice("Adding missing group members...");
+            foreach ($membersOfThisGroup as $gitlabUserId => $gitlabUserName) {
+                if ($this->in_array_i($gitlabUserId, $userGroupMembersSync["found"])) {
+                    continue;
+                }
+
+                if (!isset($membersOfThisGroup[$gitlabUserId]) || $membersOfThisGroup[$gitlabUserId] != $gitlabUserName) {
+                    continue;
+                }
+
+                $this->logger->info(sprintf("Adding user #%d \"%s\" to group #%d \"%s\" [%s].", $gitlabUserId, $gitlabUserName, $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
+                $gitlabGroupMember = null;
+
+                !$this->dryRun ? ($gitlabGroupMember = $gitlab->api("groups")->addMember($gitlabGroupId, $gitlabUserId, $config["gitlab"]["options"]["newMemberAccessLevel"])) : $this->logger->warning("Operation skipped due to dry run.");
+
+                $gitlabGroupMemberId = (is_array($gitlabGroupMember) && isset($gitlabGroupMember["id"]) && is_int($gitlabGroupMember["id"])) ? $gitlabGroupMember["id"] : sprintf("dry:%s:%d", $gitlabGroupPath, $gitlabUserId);
+                $userGroupMembersSync["new"][$gitlabUserId] = $gitlabUserName;
+            }
+
+            asort($userGroupMembersSync["new"]);
+            $this->logger->notice(sprintf("%d Gitlab group \"%s\" [%s] member(s) added.", $userGroupMembersSync["newNum"] = count($userGroupMembersSync["new"]), $gitlabGroupName, $gitlabGroupPath));
+
+            // Delete extra group members
+            $this->logger->notice("Deleting extra group members...");
+            foreach ($userGroupMembersSync["found"] as $gitlabUserId => $gitlabUserName) {
+                if (isset($membersOfThisGroup[$gitlabUserId]) && $membersOfThisGroup[$gitlabUserId] == $gitlabUserName) {
+                    continue;
+                }
+
+                $this->logger->info(sprintf("Deleting user #%d \"%s\" from group #%d \"%s\" [%s].", $gitlabUserId, $gitlabUserName, $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
+                $gitlabGroupMember = null;
+
+                !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->removeMember($gitlabGroupId, $gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
+
+                $userGroupMembersSync["extra"][$gitlabUserId] = $gitlabUserName;
+            }
+
+            asort($userGroupMembersSync["extra"]);
+            $this->logger->notice(sprintf("%d Gitlab group \"%s\" [%s] member(s) deleted.", $userGroupMembersSync["extraNum"] = count($userGroupMembersSync["extra"]), $gitlabGroupName, $gitlabGroupPath));
+
+            /* This isn't needed...
+            // Update existing group members
+            $this->logger->notice("Updating existing group members...");
+            foreach ($userGroupMembersSync["found"] as $gitlabGroupId => $gitlabGroupName) {
+                if ((isset($userGroupMembersSync["new"][$gitlabGroupId]) && is_array($userGroupMembersSync["new"][$gitlabGroupId])) || (isset($userGroupMembersSync["extra"][$gitlabGroupId]) && is_array($userGroupMembersSync["extra"][$gitlabGroupId]))) {
+                    continue;
+                }
+
+                if (!isset($membersOfThisGroup[$gitlabUserId]) || $membersOfThisGroup[$gitlabUserId] != $gitlabUserName) {
+                    continue;
+                }
+
+                $this->logger->info(sprintf("Updating user #%d \"%s\" in group #%d \"%s\" [%s].", $gitlabUserId, $gitlabUserName, $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
+                $gitlabGroupMember = null;
+
+                !$this->dryRun ? ($gitlabGroupMember = $gitlab->api("groups")->saveMember($gitlabGroupId, $gitlabUserId, $config["gitlab"]["options"]["newMemberAccessLevel"])) : $this->logger->warning("Operation skipped due to dry run.");
+
+                $userGroupMembersSync["update"][$gitlabUserId] = $gitlabUserName;
+            }
+
+            asort($userGroupMembersSync["update"]);
+            $this->logger->notice(sprintf("%d Gitlab group \"%s\" [%s] member(s) updated.", $userGroupMembersSync["updateNum"] = count($userGroupMembersSync["update"]), $gitlabGroupName, $gitlabGroupPath));
+             */
         }
         // >> Handle group memberships
 
