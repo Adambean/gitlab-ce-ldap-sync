@@ -331,6 +331,18 @@ Specify an API token (usually a personal token or impersonation token) this tool
 
 Specify the LDAP server name used by this Gitlab instance. You can find this in the "ldap_servers" section of the "gitlab.rb" configuration file, which represents an array of data specifying how to interface with LDAP such as server host address, bind DN, encryption, base, etc.
 
+**You may need to put "ldap" before this value!** This hasn't been tested across different installation types, but using the Omnibus package it appears if your "gitlab.rb" has the following...
+
+```
+gitlab_rails['ldap_servers'] = {
+    'main' => {
+        ...
+    }
+}
+```
+
+...you will likely need to specify it as "ldapmain" for this setting.
+
 ## Running
 
 Once you've configured this tool you can run it from a CLI using:
