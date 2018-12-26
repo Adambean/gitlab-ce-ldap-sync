@@ -1210,7 +1210,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
-            if ((is_array($ldapGroupMembers) && 1 <= count($ldapGroupMembers)) || $config["gitlab"]["options"]["createEmptyGroups"]) {
+            if ((!is_array($ldapGroupMembers) || 1 >= count($ldapGroupMembers)) && !$config["gitlab"]["options"]["createEmptyGroups"]) {
                 $this->logger->warning(sprintf("Not creating Gitlab group \"%s\" [%s]: No members in directory group, or config gitlab->options->createEmptyGroups is disabled.", $gitlabGroupName, $gitlabGroupPath));
                 continue;
             }
