@@ -1251,6 +1251,16 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
+            if (is_array($gitlabGroupProjects = $gitlab->api("groups")->projects($gitlabGroupId)) && ($gitlabGroupProjectsNum = count($gitlabGroupProjects)) >= 1) {
+                $this->logger->info(sprintf("Not deleting Gitlab group #%d \"%s\" [%s]: It contains %d project(s).", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath, $gitlabGroupProjectsNum));
+                continue;
+            }
+
+            if (is_array($gitlabGroupSubGroups = $gitlab->api("groups")->subgroups($gitlabGroupId)) && ($gitlabGroupSubGroupsNum = count($gitlabGroupSubGroups)) >= 1) {
+                $this->logger->info(sprintf("Not deleting Gitlab group #%d \"%s\" [%s]: It contains %d subgroup(s).", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath, $gitlabGroupSubGroupsNum));
+                continue;
+            }
+
             $this->logger->warning(sprintf("Deleting Gitlab group #%d \"%s\" [%s].", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
             $gitlabGroup = null;
 
