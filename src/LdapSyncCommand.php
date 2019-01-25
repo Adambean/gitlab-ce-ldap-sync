@@ -1305,12 +1305,14 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             }
             $ldapGroupMembers = $ldapGroupsSafe[$gitlabGroupName];
 
+            /*
             !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->update($gitlabGroupId, [
                 // "name"              => $gitlabGroupName,
                 // No point updating that. ^
                 // If the CN changes so will that bit of the DN anyway, so this can't be detected with a custom attribute containing the Gitlab group ID written back to group's LDAP object.
                 "path"              => $gitlabGroupPath,
             ])) : $this->logger->warning("Operation skipped due to dry run.");
+             */
 
             $groupsSync["update"][$gitlabGroupId] = $gitlabGroupName;
         }
