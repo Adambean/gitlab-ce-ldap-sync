@@ -1406,11 +1406,6 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                         continue; // The Gitlab root user should never be updated from LDAP.
                     }
 
-                    if (!isset($membersOfThisGroup[$gitlabUserId]) || $membersOfThisGroup[$gitlabUserId] != $gitlabUserName) {
-                        $this->logger->error(sprintf("Group member #%d: User not found.", $n));
-                        continue;
-                    }
-
                     $this->logger->info(sprintf("Found Gitlab group member #%d \"%s\".", $gitlabUserId, $gitlabUserName));
                     if (isset($userGroupMembersSync["found"][$gitlabUserId]) || $this->in_array_i($gitlabUserName, $userGroupMembersSync["found"])) {
                         $this->logger->warning(sprintf("Duplicate Gitlab group member #%d \"%s\".", $gitlabUserId, $gitlabUserName));
