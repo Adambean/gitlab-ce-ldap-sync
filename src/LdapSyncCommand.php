@@ -829,6 +829,11 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                             continue;
                         }
 
+                        if ($this->in_array_i($ldapGroupMemberName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
+                            $this->logger->info(sprintf("Group #%d / member #%d: User \"%s\" in ignore list.", $n, $o, $ldapGroupMemberName));
+                            continue;
+                        }
+
                         if (!isset($users[$ldapGroupMemberName]) || !is_array($users[$ldapGroupMemberName])) {
                             $this->logger->warning(sprintf("Group #%d / member #%d: User not found \"%s\".", $n, $o, $ldapGroupMemberName));
                             continue;
