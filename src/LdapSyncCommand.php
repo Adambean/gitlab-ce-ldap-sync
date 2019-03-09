@@ -1078,6 +1078,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
+            if ($gitlab->api("users")->all(["username" => $gitlabUserName, "blocked" => true])) {
+                $this->logger->info(sprintf("Enabling Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
+                $gitlabUser = null;
+                !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->unblock($gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
+            }
+
             $this->logger->info(sprintf("Updating Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
             $gitlabUser = null;
 
