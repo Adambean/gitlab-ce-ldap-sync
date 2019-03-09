@@ -1082,7 +1082,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $gitlabUser = null;
 
             if (!isset($ldapUsers[$gitlabUserName]) || !is_array($ldapUsers[$gitlabUserName]) || count($ldapUsers[$gitlabUserName]) < 4) {
-                $this->logger->error(sprintf("Gitlab user \"%s\" has no LDAP details available. This should not happen!", $gitlabUserName));
+                $this->logger->info(sprintf("Gitlab user \"%s\" has no LDAP details available.", $gitlabUserName));
                 continue;
             }
             $ldapUserDetails = $ldapUsers[$gitlabUserName];
@@ -1300,7 +1300,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $gitlabGroup = null;
 
             if (!isset($ldapGroupsSafe[$gitlabGroupName]) || !is_array($ldapGroupsSafe[$gitlabGroupName])) {
-                $this->logger->error(sprintf("Gitlab group \"%s\" has no LDAP details available. This should not happen!", $gitlabGroupName));
+                $this->logger->info(sprintf("Gitlab group \"%s\" has no LDAP details available.", $gitlabGroupName));
                 continue;
             }
             $ldapGroupMembers = $ldapGroupsSafe[$gitlabGroupName];
