@@ -20,6 +20,10 @@ Features implemented:
 * Synchronising groups to Gitlab
 * Synchronising Gitlab group memberships based on LDAP group memberships
 
+Not implemented:
+
+* Sub-group handling
+
 If in doubt use the dry run `-d` option to prevent writing to Gitlab first, combined with `-vv` to see exactly what would happen.
 
 **You have been warned!**
