@@ -1,6 +1,11 @@
 #!/usr/bin/env php
 <?php
 
+if ("cli" !== php_sapi_name()) {
+    printf("This tool must be used in a command line environment only.\n");
+    exit 1;
+}
+
 require_once __DIR__ . "/../vendor/autoload.php";
 
 define("ROOT_DIR",              sprintf("%s/../", __DIR__));
