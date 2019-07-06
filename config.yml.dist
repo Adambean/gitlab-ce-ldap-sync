@@ -21,6 +21,7 @@ ldap:
         userUniqueAttribute:            "uid"
         userNameAttribute:              "cn"
         userEmailAttribute:             "mail"
+        userSshKeyAttribute:            "sshPublicKey"
 
         groupDn:                        ~
         groupFilter:                    "(objectClass=groupOfUniqueNames)"
@@ -37,6 +38,7 @@ gitlab:
         createEmptyGroups:              false
         deleteExtraGroups:              false
         newMemberAccessLevel:           30
+        sshKeysImportMode:              "merge"
 
         groupNamesOfAdministrators:     []
         groupNamesOfExternal:           []

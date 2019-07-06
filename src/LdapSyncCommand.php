@@ -369,6 +369,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $addProblem("error", "ldap->queries->userEmailAttribute not specified.");
                 }
 
+                if (!isset($config["ldap"]["queries"]["userSshKeyAttribute"])) {
+                    $addProblem("warning", "ldap->queries->userSshKeyAttribute missing.");
+                } else if (!$config["ldap"]["queries"]["userSshKeyAttribute"] = trim($config["ldap"]["queries"]["userSshKeyAttribute"])) {
+                    $addProblem("warning", "ldap->queries->userSshKeyAttribute not specified.");
+                }
+
                 if (!isset($config["ldap"]["queries"]["groupDn"])) {
                     $addProblem("error", "ldap->queries->groupDn missing.");
                 } else if (!$config["ldap"]["queries"]["groupDn"] = trim($config["ldap"]["queries"]["groupDn"])) {
@@ -488,6 +494,26 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $config["gitlab"]["options"]["newMemberAccessLevel"] = 30;
                 } else if (!is_int($config["gitlab"]["options"]["newMemberAccessLevel"])) {
                     $addProblem("error", "gitlab->options->newMemberAccessLevel is not an integer.");
+                }
+
+                if (!isset($config["gitlab"]["options"]["sshKeysImportMode"])) {
+                    $addProblem("warning", "gitlab->options->sshKeysImportMode missing. (Assuming false.)");
+                    $config["gitlab"]["options"]["sshKeysImportMode"] = false;
+                } else if (null === $config["gitlab"]["options"]["sshKeysImportMode"]) {
+                    $addProblem("warning", "gitlab->options->sshKeysImportMode not specified. (Assuming false.)");
+                    $config["gitlab"]["options"]["sshKeysImportMode"] = false;
+                } else if ($config["gitlab"]["options"]["sshKeysImportMode"]) {
+                    $config["gitlab"]["options"]["sshKeysImportMode"] = strtolower(trim($config["gitlab"]["options"]["sshKeysImportMode"]));
+
+                    switch ($config["gitlab"]["options"]["sshKeysImportMode"]) {
+                        case "insert":
+                        case "merge":
+                        case "replace":
+                            break;
+
+                        default:
+                            $addProblem("error", "gitlab->options->sshKeysImportMode invalid. (Must be \"insert\", \"merge\", or \"replace\".)");
+                    }
                 }
 
                 if (!isset($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
@@ -635,9 +661,10 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         if (is_array($ldapUsers = @ldap_get_entries($ldap, $ldapUsersQuery))) {
             if ($ldapUsersNum = count($ldapUsers)) {
                 $this->logger->notice(sprintf("%d directory user(s) found.", $ldapUsersNum));
-                $ldapUserAttribute  = strtolower($config["ldap"]["queries"]["userUniqueAttribute"]);
-                $ldapNameAttribute  = strtolower($config["ldap"]["queries"]["userNameAttribute"]);
-                $ldapEmailAttribute = strtolower($config["ldap"]["queries"]["userEmailAttribute"]);
+                $ldapUserAttribute      = strtolower($config["ldap"]["queries"]["userUniqueAttribute"]);
+                $ldapNameAttribute      = strtolower($config["ldap"]["queries"]["userNameAttribute"]);
+                $ldapEmailAttribute     = strtolower($config["ldap"]["queries"]["userEmailAttribute"]);
+                $ldapSshKeyAttribute    = strtolower($config["ldap"]["queries"]["userSshKeyAttribute"]);
 
                 foreach ($ldapUsers as $i => $ldapUser) {
                     if (!is_int($i)) {
@@ -705,6 +732,19 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                         continue;
                     }
 
+                    $ldapUserSshKeys = null;
+                    if ($ldapSshKeyAttribute) {
+                        $ldapUserSshKeys = [];
+
+                        if (!isset($ldapUser[$ldapSshKeyAttribute])) {
+                            $this->logger->warning(sprintf("User #%d [%s]: Missing attribute \"%s\".", $n, $ldapUserDn, $ldapSshKeyAttribute));
+                        } elseif (!is_array($ldapUser[$ldapSshKeyAttribute])) {
+                            $this->logger->warning(sprintf("User #%d [%s]: Invalid attribute \"%s\".", $n, $ldapUserDn, $ldapSshKeyAttribute));
+                        } elseif (count($ldapUserSshKeys = $ldapUser[$ldapSshKeyAttribute]) < 1) {
+                            $this->logger->warning(sprintf("User #%d [%s]: Empty attribute \"%s\".", $n, $ldapUserDn, $ldapSshKeyAttribute));
+                        }
+                    }
+
                     if ($this->in_array_i($ldapUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
                         $this->logger->info(sprintf("User \"%s\" in ignore list.", $ldapUserName));
                         continue;
@@ -721,6 +761,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                         "username"      => $ldapUserName,
                         "fullName"      => $ldapUserFullName,
                         "email"         => $ldapUserEmail,
+                        "sshKeys"       => $ldapUserSshKeys,
                         "isAdmin"       => false,
                         "isExternal"    => false,
                     ];
