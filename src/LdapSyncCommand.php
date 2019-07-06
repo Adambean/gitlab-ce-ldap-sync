@@ -371,7 +371,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
                 if (!isset($config["ldap"]["queries"]["userSshKeyAttribute"])) {
                     $addProblem("warning", "ldap->queries->userSshKeyAttribute missing.");
-                } else if (!$config["ldap"]["queries"]["userSshKeyAttribute"] = trim($config["ldap"]["queries"]["userSshKeyAttribute"])) {
+                } elseif (!$config["ldap"]["queries"]["userSshKeyAttribute"] = trim($config["ldap"]["queries"]["userSshKeyAttribute"])) {
                     $addProblem("warning", "ldap->queries->userSshKeyAttribute not specified.");
                 }
 
@@ -499,10 +499,10 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["sshKeysImportMode"])) {
                     $addProblem("warning", "gitlab->options->sshKeysImportMode missing. (Assuming false.)");
                     $config["gitlab"]["options"]["sshKeysImportMode"] = false;
-                } else if (null === $config["gitlab"]["options"]["sshKeysImportMode"]) {
+                } elseif (null === $config["gitlab"]["options"]["sshKeysImportMode"]) {
                     $addProblem("warning", "gitlab->options->sshKeysImportMode not specified. (Assuming false.)");
                     $config["gitlab"]["options"]["sshKeysImportMode"] = false;
-                } else if ($config["gitlab"]["options"]["sshKeysImportMode"]) {
+                } elseif ($config["gitlab"]["options"]["sshKeysImportMode"]) {
                     $config["gitlab"]["options"]["sshKeysImportMode"] = strtolower(trim($config["gitlab"]["options"]["sshKeysImportMode"]));
 
                     switch ($config["gitlab"]["options"]["sshKeysImportMode"]) {
