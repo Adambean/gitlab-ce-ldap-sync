@@ -1528,7 +1528,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      */
     private function array_key_exists_i($key, array $haystack): bool
     {
-        $key = strtolower($key);
+        if (!$key = strtolower($key)) {
+            throw new \Exception("Key not specified.");
+        }
 
         foreach (array_change_key_case($haystack, CASE_LOWER) as $k => $v) {
             if ($k === $key) {
