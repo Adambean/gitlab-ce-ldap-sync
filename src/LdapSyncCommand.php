@@ -1594,7 +1594,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         }
 
         $password   = "";
-        $chars      = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`¬!\$%^&*()-_=+,<.>;:'@#~[]{}?";
+        $chars      = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         $charsNum   = strlen($chars);
         for ($i = 0; $i < $length; $i++) {
             $password .= $chars[random_int(0, $charsNum - 1)];
