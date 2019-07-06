@@ -31,15 +31,15 @@ gitlab:
     debug: false
 
     options:
-        userNamesToIgnore:              ~
-        groupNamesToIgnore:             ~
+        userNamesToIgnore:              []
+        groupNamesToIgnore:             []
 
         createEmptyGroups:              false
         deleteExtraGroups:              false
         newMemberAccessLevel:           30
 
-        groupNamesOfAdministrators:     ~
-        groupNamesOfExternal:           ~
+        groupNamesOfAdministrators:     []
+        groupNamesOfExternal:           []
 
     instances:
         example:
