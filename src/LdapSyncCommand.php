@@ -249,10 +249,10 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             if (!isset($config["ldap"]["debug"])) {
                 $addProblem("warning", "ldap->debug missing. (Assuming false.)");
                 $config["ldap"]["debug"] = false;
-            } else if (null === $config["ldap"]["debug"]) {
+            } elseif (null === $config["ldap"]["debug"]) {
                 $addProblem("warning", "ldap->debug not specified. (Assuming false.)");
                 $config["ldap"]["debug"] = false;
-            } else if (!is_bool($config["ldap"]["debug"])) {
+            } elseif (!is_bool($config["ldap"]["debug"])) {
                 $addProblem("error", "ldap->debug is not a boolean.");
             }
 
@@ -262,34 +262,34 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             } else {
                 if (!isset($config["ldap"]["server"]["host"])) {
                     $addProblem("error", "ldap->server->host missing.");
-                } else if (!$config["ldap"]["server"]["host"] = trim($config["ldap"]["server"]["host"])) {
+                } elseif (!$config["ldap"]["server"]["host"] = trim($config["ldap"]["server"]["host"])) {
                     $addProblem("error", "ldap->server->host not specified.");
                 }
 
                 if (!isset($config["ldap"]["server"]["port"])) {
                     $addProblem("warning", "ldap->server->port missing. (It will be determined by the encryption setting.)");
                     $config["ldap"]["server"]["port"] = null;
-                } else if (!$config["ldap"]["server"]["port"] = intval($config["ldap"]["server"]["port"])) {
+                } elseif (!$config["ldap"]["server"]["port"] = intval($config["ldap"]["server"]["port"])) {
                     $addProblem("warning", "ldap->server->port not specified. (It will be determined by the encryption setting.)");
                     $config["ldap"]["server"]["port"] = null;
-                } else if ($config["ldap"]["server"]["port"] < 1 || $config["ldap"]["server"]["port"] > 65535) {
+                } elseif ($config["ldap"]["server"]["port"] < 1 || $config["ldap"]["server"]["port"] > 65535) {
                     $addProblem("error", "ldap->server->port out of range. (Must be 1-65535.)");
                 }
 
                 if (!isset($config["ldap"]["server"]["version"])) {
                     $addProblem("warning", "ldap->server->version missing. (Assuming 3.)");
                     $config["ldap"]["server"]["version"] = 3;
-                } else if (!$config["ldap"]["server"]["version"] = intval($config["ldap"]["server"]["version"])) {
+                } elseif (!$config["ldap"]["server"]["version"] = intval($config["ldap"]["server"]["version"])) {
                     $addProblem("warning", "ldap->server->version not specified. (Assuming 3.)");
                     $config["ldap"]["server"]["version"] = 3;
-                } else if ($config["ldap"]["server"]["version"] < 1 || $config["ldap"]["server"]["version"] > 3) {
+                } elseif ($config["ldap"]["server"]["version"] < 1 || $config["ldap"]["server"]["version"] > 3) {
                     $addProblem("error", "ldap->server->version out of range. (Must be 1-3.)");
                 }
 
                 if (!isset($config["ldap"]["server"]["encryption"])) {
                     $addProblem("warning", "ldap->server->encryption missing. (Assuming none.)");
                     $config["ldap"]["server"]["encryption"] = "none";
-                } else if (!$config["ldap"]["server"]["encryption"] = trim($config["ldap"]["server"]["encryption"])) {
+                } elseif (!$config["ldap"]["server"]["encryption"] = trim($config["ldap"]["server"]["encryption"])) {
                     $addProblem("warning", "ldap->server->encryption not specified. (Assuming none.)");
                     $config["ldap"]["server"]["encryption"] = "none";
                 } else {
@@ -315,13 +315,13 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["ldap"]["server"]["bindDn"])) {
                     $addProblem("warning", "ldap->server->bindDn missing. (Assuming anonymous access.)");
                     $config["ldap"]["server"]["bindDn"] = null;
-                } else if (!$config["ldap"]["server"]["bindDn"] = trim($config["ldap"]["server"]["bindDn"])) {
+                } elseif (!$config["ldap"]["server"]["bindDn"] = trim($config["ldap"]["server"]["bindDn"])) {
                     $addProblem("warning", "ldap->server->bindDn not specified. (Assuming anonymous access.)");
                     $config["ldap"]["server"]["bindDn"] = null;
                 } else {
                     if (!isset($config["ldap"]["server"]["bindPassword"])) {
                         $addProblem("warning", "ldap->server->bindPassword missing. (Must be specified for non-anonymous access.)");
-                    } else if (!strlen($config["ldap"]["server"]["bindPassword"])) {
+                    } elseif (!strlen($config["ldap"]["server"]["bindPassword"])) {
                         $addProblem("warning", "ldap->server->bindPassword not specified. (Must be specified for non-anonymous access.)");
                     }
                 }
@@ -334,38 +334,38 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             } else {
                 if (!isset($config["ldap"]["queries"]["baseDn"])) {
                     $addProblem("error", "ldap->queries->baseDn missing.");
-                } else if (!$config["ldap"]["queries"]["baseDn"] = trim($config["ldap"]["queries"]["baseDn"])) {
+                } elseif (!$config["ldap"]["queries"]["baseDn"] = trim($config["ldap"]["queries"]["baseDn"])) {
                     $addProblem("error", "ldap->queries->baseDn not specified.");
                 }
 
                 if (!isset($config["ldap"]["queries"]["userDn"])) {
                     $addProblem("error", "ldap->queries->userDn missing.");
-                } else if (!$config["ldap"]["queries"]["userDn"] = trim($config["ldap"]["queries"]["userDn"])) {
+                } elseif (!$config["ldap"]["queries"]["userDn"] = trim($config["ldap"]["queries"]["userDn"])) {
                     // $addProblem("warning", "ldap->queries->userDn not specified.");
                     // This is OK: Users will be looked for from the directory root.
                 }
 
                 if (!isset($config["ldap"]["queries"]["userFilter"])) {
                     $addProblem("error", "ldap->queries->userFilter missing.");
-                } else if (!$config["ldap"]["queries"]["userFilter"] = trim($config["ldap"]["queries"]["userFilter"])) {
+                } elseif (!$config["ldap"]["queries"]["userFilter"] = trim($config["ldap"]["queries"]["userFilter"])) {
                     $addProblem("error", "ldap->queries->userFilter not specified.");
                 }
 
                 if (!isset($config["ldap"]["queries"]["userUniqueAttribute"])) {
                     $addProblem("error", "ldap->queries->userUniqueAttribute missing.");
-                } else if (!$config["ldap"]["queries"]["userUniqueAttribute"] = trim($config["ldap"]["queries"]["userUniqueAttribute"])) {
+                } elseif (!$config["ldap"]["queries"]["userUniqueAttribute"] = trim($config["ldap"]["queries"]["userUniqueAttribute"])) {
                     $addProblem("error", "ldap->queries->userUniqueAttribute not specified.");
                 }
 
                 if (!isset($config["ldap"]["queries"]["userNameAttribute"])) {
                     $addProblem("error", "ldap->queries->userNameAttribute missing.");
-                } else if (!$config["ldap"]["queries"]["userNameAttribute"] = trim($config["ldap"]["queries"]["userNameAttribute"])) {
+                } elseif (!$config["ldap"]["queries"]["userNameAttribute"] = trim($config["ldap"]["queries"]["userNameAttribute"])) {
                     $addProblem("error", "ldap->queries->userNameAttribute not specified.");
                 }
 
                 if (!isset($config["ldap"]["queries"]["userEmailAttribute"])) {
                     $addProblem("error", "ldap->queries->userEmailAttribute missing.");
-                } else if (!$config["ldap"]["queries"]["userEmailAttribute"] = trim($config["ldap"]["queries"]["userEmailAttribute"])) {
+                } elseif (!$config["ldap"]["queries"]["userEmailAttribute"] = trim($config["ldap"]["queries"]["userEmailAttribute"])) {
                     $addProblem("error", "ldap->queries->userEmailAttribute not specified.");
                 }
 
@@ -377,26 +377,26 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
                 if (!isset($config["ldap"]["queries"]["groupDn"])) {
                     $addProblem("error", "ldap->queries->groupDn missing.");
-                } else if (!$config["ldap"]["queries"]["groupDn"] = trim($config["ldap"]["queries"]["groupDn"])) {
+                } elseif (!$config["ldap"]["queries"]["groupDn"] = trim($config["ldap"]["queries"]["groupDn"])) {
                     // $addProblem("error", "ldap->queries->groupDn not specified.");
                     // This is OK: Groups will be looked for from the directory root.
                 }
 
                 if (!isset($config["ldap"]["queries"]["groupFilter"])) {
                     $addProblem("error", "ldap->queries->groupFilter missing.");
-                } else if (!$config["ldap"]["queries"]["groupFilter"] = trim($config["ldap"]["queries"]["groupFilter"])) {
+                } elseif (!$config["ldap"]["queries"]["groupFilter"] = trim($config["ldap"]["queries"]["groupFilter"])) {
                     $addProblem("error", "ldap->queries->groupFilter not specified.");
                 }
 
                 if (!isset($config["ldap"]["queries"]["groupUniqueAttribute"])) {
                     $addProblem("error", "ldap->queries->groupUniqueAttribute missing.");
-                } else if (!$config["ldap"]["queries"]["groupUniqueAttribute"] = trim($config["ldap"]["queries"]["groupUniqueAttribute"])) {
+                } elseif (!$config["ldap"]["queries"]["groupUniqueAttribute"] = trim($config["ldap"]["queries"]["groupUniqueAttribute"])) {
                     $addProblem("error", "ldap->queries->groupUniqueAttribute not specified.");
                 }
 
                 if (!isset($config["ldap"]["queries"]["groupMemberAttribute"])) {
                     $addProblem("error", "ldap->queries->groupMemberAttribute missing.");
-                } else if (!$config["ldap"]["queries"]["groupMemberAttribute"] = trim($config["ldap"]["queries"]["groupMemberAttribute"])) {
+                } elseif (!$config["ldap"]["queries"]["groupMemberAttribute"] = trim($config["ldap"]["queries"]["groupMemberAttribute"])) {
                     $addProblem("error", "ldap->queries->groupMemberAttribute not specified.");
                 }
             }
@@ -411,10 +411,10 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             if (!isset($config["gitlab"]["debug"])) {
                 $addProblem("warning", "gitlab->debug missing. (Assuming false.)");
                 $config["gitlab"]["debug"] = false;
-            } else if (null === $config["gitlab"]["debug"]) {
+            } elseif (null === $config["gitlab"]["debug"]) {
                 $addProblem("warning", "gitlab->debug not specified. (Assuming false.)");
                 $config["gitlab"]["debug"] = false;
-            } else if (!is_bool($config["gitlab"]["debug"])) {
+            } elseif (!is_bool($config["gitlab"]["debug"])) {
                 $addProblem("error", "gitlab->debug is not a boolean.");
             }
 
@@ -425,12 +425,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["userNamesToIgnore"])) {
                     $addProblem("warning", "gitlab->options->userNamesToIgnore missing. (Assuming none.)");
                     $config["gitlab"]["options"]["userNamesToIgnore"] = [];
-                } else if (null === $config["gitlab"]["options"]["userNamesToIgnore"]) {
+                } elseif (null === $config["gitlab"]["options"]["userNamesToIgnore"]) {
                     // $addProblem("warning", "gitlab->options->userNamesToIgnore not specified. (Assuming none.)");
                     $config["gitlab"]["options"]["userNamesToIgnore"] = [];
-                } else if (!is_array($config["gitlab"]["options"]["userNamesToIgnore"])) {
+                } elseif (!is_array($config["gitlab"]["options"]["userNamesToIgnore"])) {
                     $addProblem("error", "gitlab->options->userNamesToIgnore is not an array.");
-                } else if (1 <= count($config["gitlab"]["options"]["userNamesToIgnore"])) {
+                } elseif (1 <= count($config["gitlab"]["options"]["userNamesToIgnore"])) {
                     foreach ($config["gitlab"]["options"]["userNamesToIgnore"] as $i => $userName) {
                         if (!is_string($userName)) {
                             $addProblem("error", sprintf("gitlab->options->userNamesToIgnore[%d] is not a string.", $i));
@@ -447,12 +447,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["groupNamesToIgnore"])) {
                     $addProblem("warning", "gitlab->options->groupNamesToIgnore missing. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesToIgnore"] = [];
-                } else if (null === $config["gitlab"]["options"]["groupNamesToIgnore"]) {
+                } elseif (null === $config["gitlab"]["options"]["groupNamesToIgnore"]) {
                     // $addProblem("warning", "gitlab->options->groupNamesToIgnore not specified. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesToIgnore"] = [];
-                } else if (!is_array($config["gitlab"]["options"]["groupNamesToIgnore"])) {
+                } elseif (!is_array($config["gitlab"]["options"]["groupNamesToIgnore"])) {
                     $addProblem("error", "gitlab->options->groupNamesToIgnore is not an array.");
-                } else if (1 <= count($config["gitlab"]["options"]["groupNamesToIgnore"])) {
+                } elseif (1 <= count($config["gitlab"]["options"]["groupNamesToIgnore"])) {
                     foreach ($config["gitlab"]["options"]["groupNamesToIgnore"] as $i => $groupName) {
                         if (!is_string($groupName)) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesToIgnore[%d] is not a string.", $i));
@@ -469,30 +469,30 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["createEmptyGroups"])) {
                     $addProblem("warning", "gitlab->options->createEmptyGroups missing. (Assuming false.)");
                     $config["gitlab"]["options"]["createEmptyGroups"] = false;
-                } else if (null === $config["gitlab"]["options"]["createEmptyGroups"]) {
+                } elseif (null === $config["gitlab"]["options"]["createEmptyGroups"]) {
                     $addProblem("warning", "gitlab->options->createEmptyGroups not specified. (Assuming false.)");
                     $config["gitlab"]["options"]["createEmptyGroups"] = false;
-                } else if (!is_bool($config["gitlab"]["options"]["createEmptyGroups"])) {
+                } elseif (!is_bool($config["gitlab"]["options"]["createEmptyGroups"])) {
                     $addProblem("error", "gitlab->options->createEmptyGroups is not a boolean.");
                 }
 
                 if (!isset($config["gitlab"]["options"]["deleteExtraGroups"])) {
                     $addProblem("warning", "gitlab->options->deleteExtraGroups missing. (Assuming false.)");
                     $config["gitlab"]["options"]["deleteExtraGroups"] = false;
-                } else if (null === $config["gitlab"]["options"]["deleteExtraGroups"]) {
+                } elseif (null === $config["gitlab"]["options"]["deleteExtraGroups"]) {
                     $addProblem("warning", "gitlab->options->deleteExtraGroups not specified. (Assuming false.)");
                     $config["gitlab"]["options"]["deleteExtraGroups"] = false;
-                } else if (!is_bool($config["gitlab"]["options"]["deleteExtraGroups"])) {
+                } elseif (!is_bool($config["gitlab"]["options"]["deleteExtraGroups"])) {
                     $addProblem("error", "gitlab->options->deleteExtraGroups is not a boolean.");
                 }
 
                 if (!isset($config["gitlab"]["options"]["newMemberAccessLevel"])) {
                     $addProblem("warning", "gitlab->options->newMemberAccessLevel missing. (Assuming 30.)");
                     $config["gitlab"]["options"]["newMemberAccessLevel"] = 30;
-                } else if (null === $config["gitlab"]["options"]["newMemberAccessLevel"]) {
+                } elseif (null === $config["gitlab"]["options"]["newMemberAccessLevel"]) {
                     $addProblem("warning", "gitlab->options->newMemberAccessLevel not specified. (Assuming 30.)");
                     $config["gitlab"]["options"]["newMemberAccessLevel"] = 30;
-                } else if (!is_int($config["gitlab"]["options"]["newMemberAccessLevel"])) {
+                } elseif (!is_int($config["gitlab"]["options"]["newMemberAccessLevel"])) {
                     $addProblem("error", "gitlab->options->newMemberAccessLevel is not an integer.");
                 }
 
@@ -519,12 +519,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
                     // $addProblem("warning", "gitlab->options->groupNamesOfAdministrators missing. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesOfAdministrators"] = [];
-                } else if (null === $config["gitlab"]["options"]["groupNamesOfAdministrators"]) {
+                } elseif (null === $config["gitlab"]["options"]["groupNamesOfAdministrators"]) {
                     $addProblem("warning", "gitlab->options->groupNamesOfAdministrators not specified. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesOfAdministrators"] = [];
-                } else if (!is_array($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
+                } elseif (!is_array($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
                     $addProblem("error", "gitlab->options->groupNamesOfAdministrators is not an array.");
-                } else if (1 <= count($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
+                } elseif (1 <= count($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
                     foreach ($config["gitlab"]["options"]["groupNamesOfAdministrators"] as $i => $groupName) {
                         if (!is_string($groupName)) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesOfAdministrators[%d] is not a string.", $i));
@@ -541,12 +541,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["groupNamesOfExternal"])) {
                     $addProblem("warning", "gitlab->options->groupNamesOfExternal missing. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesOfExternal"] = [];
-                } else if (null === $config["gitlab"]["options"]["groupNamesOfExternal"]) {
+                } elseif (null === $config["gitlab"]["options"]["groupNamesOfExternal"]) {
                     // $addProblem("warning", "gitlab->options->groupNamesOfExternal not specified. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesOfExternal"] = [];
-                } else if (!is_array($config["gitlab"]["options"]["groupNamesOfExternal"])) {
+                } elseif (!is_array($config["gitlab"]["options"]["groupNamesOfExternal"])) {
                     $addProblem("error", "gitlab->options->groupNamesOfExternal is not an array.");
-                } else if (1 <= count($config["gitlab"]["options"]["groupNamesOfExternal"])) {
+                } elseif (1 <= count($config["gitlab"]["options"]["groupNamesOfExternal"])) {
                     foreach ($config["gitlab"]["options"]["groupNamesOfExternal"] as $i => $groupName) {
                         if (!is_string($groupName)) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesOfExternal[%d] is not a string.", $i));
@@ -569,13 +569,13 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 foreach (array_keys($config["gitlab"]["instances"]) as $instance) {
                     if (!isset($config["gitlab"]["instances"][$instance]["url"])) {
                         $addProblem("error", sprintf("gitlab->instances->%s->url missing.", $instance));
-                    } else if (!$config["gitlab"]["instances"][$instance]["url"] = trim($config["gitlab"]["instances"][$instance]["url"])) {
+                    } elseif (!$config["gitlab"]["instances"][$instance]["url"] = trim($config["gitlab"]["instances"][$instance]["url"])) {
                         $addProblem("error", sprintf("gitlab->instances->%s->url not specified.", $instance));
                     }
 
                     if (!isset($config["gitlab"]["instances"][$instance]["token"])) {
                         $addProblem("error", sprintf("gitlab->instances->%s->token missing.", $instance));
-                    } else if (!$config["gitlab"]["instances"][$instance]["token"] = trim($config["gitlab"]["instances"][$instance]["token"])) {
+                    } elseif (!$config["gitlab"]["instances"][$instance]["token"] = trim($config["gitlab"]["instances"][$instance]["token"])) {
                         $addProblem("error", sprintf("gitlab->instances->%s->token not specified.", $instance));
                     }
                 }
