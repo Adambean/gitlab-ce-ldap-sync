@@ -22,6 +22,7 @@ ldap:
         userUniqueAttribute:            "uid"
         userNameAttribute:              "cn"
         userEmailAttribute:             "mail"
+		userMatchAttribute:             "uid"
 
         groupDn:                        ~
         groupFilter:                    "(objectClass=groupOfUniqueNames)"

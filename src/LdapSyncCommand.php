@@ -368,6 +368,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 } elseif (!$config["ldap"]["queries"]["userEmailAttribute"] = trim($config["ldap"]["queries"]["userEmailAttribute"])) {
                     $addProblem("error", "ldap->queries->userEmailAttribute not specified.");
                 }
+                if (!array_key_exists("userMatchAttribute", $config["ldap"]["queries"])) {
+                    $addProblem("warning", "ldap->queries->userMatchAttribute missing. (Assuming == userUniqueAttribute.)");
+                    $config["ldap"]["queries"]["userMatchAttribute"] = $config["ldap"]["queries"]["userUniqueAttribute"];
+                } else if (null === $config["ldap"]["queries"]["userMatchAttribute"]) {
+                    $addProblem("error", "ldap->queries->userMatchAttribute not specified.");
+                }                
 
                 if (!isset($config["ldap"]["queries"]["groupDn"])) {
                     $addProblem("error", "ldap->queries->groupDn missing.");
@@ -644,6 +650,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $config["ldap"]["queries"]["baseDn"]
         ), $config["ldap"]["queries"]["userFilter"], [
             $config["ldap"]["queries"]["userUniqueAttribute"],
+            $config["ldap"]["queries"]["userMatchAttribute"],
             $config["ldap"]["queries"]["userNameAttribute"],
             $config["ldap"]["queries"]["userEmailAttribute"],
         ]))) {
@@ -654,6 +661,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             if ($ldapUsersNum = count($ldapUsers)) {
                 $this->logger->notice(sprintf("%d directory user(s) found.", $ldapUsersNum));
                 $ldapUserAttribute  = strtolower($config["ldap"]["queries"]["userUniqueAttribute"]);
+                $ldapUsermatchAttribute  = strtolower($config["ldap"]["queries"]["userMatchAttribute"]);
                 $ldapNameAttribute  = strtolower($config["ldap"]["queries"]["userNameAttribute"]);
                 $ldapEmailAttribute = strtolower($config["ldap"]["queries"]["userEmailAttribute"]);
 
@@ -699,6 +707,21 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                         $this->logger->warning(sprintf("User #%d [%s]: Username incompatible with Gitlab, changed to \"%s\".", $n, $ldapUserDn, $ldapUserName));
                     }
 
+                    if (!isset($ldapUser[$ldapUsermatchAttribute])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Missing attribute \"%s\".", $n, $ldapUserDn, $ldapUsermatchAttribute));
+                        continue;
+                    }
+
+                    if (!is_array($ldapUser[$ldapUsermatchAttribute]) || !isset($ldapUser[$ldapUsermatchAttribute][0]) || !is_string($ldapUser[$ldapUsermatchAttribute][0])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Invalid attribute \"%s\".", $n, $ldapUserDn, $ldapUsermatchAttribute));
+                        continue;
+                    }
+
+                    if (!$ldapUserMatch = trim($ldapUser[$ldapUsermatchAttribute][0])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Empty attribute \"%s\".", $n, $ldapUserDn, $ldapUsermatchAttribute));
+                        continue;
+                    }
+
                     if (!isset($ldapUser[$ldapNameAttribute])) {
                         $this->logger->error(sprintf("User #%d [%s]: Missing attribute \"%s\".", $n, $ldapUserDn, $ldapNameAttribute));
                         continue;
@@ -742,6 +765,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
                     $users[$ldapUserName] = [
                         "dn"            => $ldapUserDn,
+                        "usermatchid"   => $ldapUserMatch,
                         "username"      => $ldapUserName,
                         "fullName"      => $ldapUserFullName,
                         "email"         => $ldapUserEmail,
@@ -851,6 +875,25 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                         if (!$ldapGroupMemberName = trim($ldapGroupMember)) {
                             $this->logger->warning(sprintf("Group #%d / member #%d: Empty member attribute \"%s\".", $n, $o, $ldapGroupMemberAttribute));
                             continue;
+                        }
+
+                        if (!($ldapUsermatchAttribute == $ldapUserAttribute)) {
+                            //a usermatchAttribute exists that is different from the username, look up the matching user name from list of users using the usermatchid
+                            $matchfound = false;
+                            foreach ($users as $userName => $user) {
+                            
+                                if ($user["usermatchid"] == $ldapGroupMemberName) {
+                                    $ldapGroupMemberName = $userName;
+                                    $this->logger->debug(sprintf("Group #%d / member #%d: Userid \"%s\" matched to username \"%s\".", $n, $o, $user["usermatchid"], $userName));
+                                    $matchfound = true;
+                                    break;
+                                }
+                            }
+
+                            if (!$matchfound) {
+                                $this->logger->warning(sprintf("Group #%d / member #%d: No matching user found for group member attribute \"%s\".", $n, $o, $ldapGroupMemberAttribute));
+                                continue;
+                            }
                         }
 
                         if ($this->in_array_i($ldapGroupMemberName, $config["gitlab"]["options"]["userNamesToIgnore"])) {

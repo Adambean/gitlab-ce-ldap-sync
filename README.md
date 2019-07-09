@@ -165,6 +165,10 @@ Specify the attribute used for the user's email address. (If there are multiple 
 
 Default: "mail"
 
+##### userMatchAttribute *(string|null)*
+
+By default, it is assumed that the userUniqueAttribute is a user name that can be used to unambiguously determine group membership of individual persons as well as being used for login credentials. If this is the case with your LDAP structure, set userMatchAttribute to be empty. If that is not the case, userMatchAttribute can be used to separate these two functions. Specify userMatchAttribute to the feature of your user that determines his membership in a group and userUniqueAttribute to the username attribute used for gitlab login credentials. For instance, in some Microsoft Active Directory versions, groups possess a 'member' attribute that lists the 'distinguishedName' attributes of each member of the group. the user name however is a different attribute of each user being attributed to that group. In this case, set userMatchAttribute to 'distinguishedName' and userUniqueAttribute to your username attribute.
+
 ##### groupDn *(string|null)*
 
 Specify the distinguished name containing group objects to be searched for.
