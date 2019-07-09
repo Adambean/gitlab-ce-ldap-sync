@@ -1050,6 +1050,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 "external"          => $ldapUserDetails["isExternal"],
             ])) : $this->logger->warning("Operation skipped due to dry run.");
 
+            //Adding too many users in too short time sometimes leads to a 500 error by the API
+            usleep(100000);
+
             $gitlabUserId = (is_array($gitlabUser) && isset($gitlabUser["id"]) && is_int($gitlabUser["id"])) ? $gitlabUser["id"] : sprintf("dry:%s", $ldapUserDetails["dn"]);
             $usersSync["new"][$gitlabUserId] = $gitlabUserName;
         }
