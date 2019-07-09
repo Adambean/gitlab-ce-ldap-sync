@@ -596,6 +596,16 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             }
         }
 
+        //solves: ldap_search(): Search: Operations error
+        //occurs when no user_dn has been specified
+        //https://stackoverflow.com/questions/17742751/ldap-operations-error
+        if ($config["ldap"]["wincompatibilitymode"]) {
+            $this->logger->debug("LDAP: Enabling compatibility mode");
+            if (false === @ldap_set_option(null, LDAP_OPT_REFERRALS, 0)) {
+                throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            }
+        }
+
         $this->logger->debug("LDAP: Connecting", ["uri" => $ldapUri]);
         if (false === ($ldap = @ldap_connect($ldapUri))) {
             throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
