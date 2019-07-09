@@ -572,6 +572,14 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      */
     private function getLdapUsersAndGroups(array $config, array &$users, int &$usersNum, array &$groups, int &$groupsNum): void
     {
+
+        $slugifyldapUsername = new Slugify([
+            "regexp"        => "/([^A-Za-z0-9]|-_\.)+/",
+            "separator"     => ",",
+            "lowercase"     => false,
+            "trim"          => true,
+        ]);
+
         // Connect
         $this->logger->notice("Establishing LDAP connection.", [
             "host"          => $config["ldap"]["server"]["host"],
@@ -683,6 +691,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     if (!$ldapUserName = trim($ldapUser[$ldapUserAttribute][0])) {
                         $this->logger->error(sprintf("User #%d [%s]: Empty attribute \"%s\".", $n, $ldapUserDn, $ldapUserAttribute));
                         continue;
+                    }
+
+                    //make sure the username format is compatible with gitlab later on
+                    if (!($ldapUserName == $slugifyldapUsername->slugify($ldapUserName))) {
+                        $ldapUserName = $slugifyldapUsername->slugify($ldapUserName);
+                        $this->logger->warning(sprintf("User #%d [%s]: Username incompatible with Gitlab, changed to \"%s\".", $n, $ldapUserDn, $ldapUserName));
                     }
 
                     if (!isset($ldapUser[$ldapNameAttribute])) {
