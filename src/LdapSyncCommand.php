@@ -700,10 +700,10 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                         continue;
                     }
 
-                    //make sure the username format is compatible with gitlab later on
-                    if (!($ldapUserName == $slugifyldapUsername->slugify($ldapUserName))) {
-                        $ldapUserName = $slugifyldapUsername->slugify($ldapUserName);
-                        $this->logger->warning(sprintf("User #%d [%s]: Username incompatible with Gitlab, changed to \"%s\".", $n, $ldapUserDn, $ldapUserName));
+                    // Make sure the username format is compatible with Gitlab later on
+                    if (($ldapUserNameSlugified = $slugifyLdapUsername->slugify($ldapUserName)) !== $ldapUserName) {
+                        $this->logger->warning(sprintf("User #%d [%s]: Username \"%s\" is incompatible with Gitlab, changed to \"%s\".", $n, $ldapUserDn, $ldapUserName, $ldapUserNameSlugified));
+                        $ldapUserName = $ldapUserNameSlugified;
                     }
 
                     if (!isset($ldapUser[$ldapUsermatchAttribute])) {
