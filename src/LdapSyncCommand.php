@@ -15,6 +15,8 @@ use Cocur\Slugify\Slugify;
 
 class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 {
+    const API_COOL_DOWN_USECONDS = 100000;
+
     private $logger = null;
     private $dryRun = false;
 
@@ -357,6 +359,14 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $addProblem("error", "ldap->queries->userUniqueAttribute not specified.");
                 }
 
+                if (!isset($config["ldap"]["queries"]["userMatchAttribute"])) {
+                    $addProblem("warning", "ldap->queries->userMatchAttribute missing. (Assuming == userUniqueAttribute.)");
+                    $config["ldap"]["queries"]["userMatchAttribute"] = $config["ldap"]["queries"]["userUniqueAttribute"];
+                } elseif (!$config["ldap"]["queries"]["userMatchAttribute"] = trim($config["ldap"]["queries"]["userMatchAttribute"])) {
+                    $addProblem("warning", "ldap->queries->userMatchAttribute not specified. (Assuming == userUniqueAttribute.)");
+                    $config["ldap"]["queries"]["userMatchAttribute"] = $config["ldap"]["queries"]["userUniqueAttribute"];
+                }
+
                 if (!isset($config["ldap"]["queries"]["userNameAttribute"])) {
                     $addProblem("error", "ldap->queries->userNameAttribute missing.");
                 } elseif (!$config["ldap"]["queries"]["userNameAttribute"] = trim($config["ldap"]["queries"]["userNameAttribute"])) {
@@ -596,6 +606,13 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      */
     private function getLdapUsersAndGroups(array $config, array &$users, int &$usersNum, array &$groups, int &$groupsNum): void
     {
+        $slugifyLdapUsername = new Slugify([
+            "regexp"        => "/([^A-Za-z0-9]|-_\.)+/",
+            "separator"     => ",",
+            "lowercase"     => false,
+            "trim"          => true,
+        ]);
+
         // Connect
         $this->logger->notice("Establishing LDAP connection.", [
             "host"          => $config["ldap"]["server"]["host"],
@@ -616,6 +633,16 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         if ($config["ldap"]["debug"]) {
             $this->logger->debug("LDAP: Enabling debug mode");
             if (false === @ldap_set_option(null, LDAP_OPT_DEBUG_LEVEL, 6)) {
+                throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            }
+        }
+
+        // Solves: ldap_search(): Search: Operations error.
+        // Occurs when no "user_dn" has been specified.
+        // https://stackoverflow.com/questions/17742751/ldap-operations-error
+        if ($config["ldap"]["winCompatibilityMode"]) {
+            $this->logger->debug("LDAP: Enabling compatibility mode");
+            if (false === @ldap_set_option(null, LDAP_OPT_REFERRALS, 0)) {
                 throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
             }
         }
@@ -650,6 +677,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $config["ldap"]["queries"]["baseDn"]
         ), $config["ldap"]["queries"]["userFilter"], [
             $config["ldap"]["queries"]["userUniqueAttribute"],
+            $config["ldap"]["queries"]["userMatchAttribute"],
             $config["ldap"]["queries"]["userNameAttribute"],
             $config["ldap"]["queries"]["userEmailAttribute"],
         ]))) {
@@ -660,6 +688,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             if ($ldapUsersNum = count($ldapUsers)) {
                 $this->logger->notice(sprintf("%d directory user(s) found.", $ldapUsersNum));
                 $ldapUserAttribute      = strtolower($config["ldap"]["queries"]["userUniqueAttribute"]);
+                $ldapUserMatchAttribute = strtolower($config["ldap"]["queries"]["userMatchAttribute"]);
                 $ldapNameAttribute      = strtolower($config["ldap"]["queries"]["userNameAttribute"]);
                 $ldapEmailAttribute     = strtolower($config["ldap"]["queries"]["userEmailAttribute"]);
                 $ldapSshKeyAttribute    = strtolower($config["ldap"]["queries"]["userSshKeyAttribute"]);
@@ -697,6 +726,27 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
                     if (!$ldapUserName = trim($ldapUser[$ldapUserAttribute][0])) {
                         $this->logger->error(sprintf("User #%d [%s]: Empty attribute \"%s\".", $n, $ldapUserDn, $ldapUserAttribute));
+                        continue;
+                    }
+
+                    // Make sure the username format is compatible with Gitlab later on
+                    if (($ldapUserNameSlugified = $slugifyLdapUsername->slugify($ldapUserName)) !== $ldapUserName) {
+                        $this->logger->warning(sprintf("User #%d [%s]: Username \"%s\" is incompatible with Gitlab, changed to \"%s\".", $n, $ldapUserDn, $ldapUserName, $ldapUserNameSlugified));
+                        $ldapUserName = $ldapUserNameSlugified;
+                    }
+
+                    if (!isset($ldapUser[$ldapUserMatchAttribute])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Missing attribute \"%s\".", $n, $ldapUserDn, $ldapUserMatchAttribute));
+                        continue;
+                    }
+
+                    if (!is_array($ldapUser[$ldapUserMatchAttribute]) || !isset($ldapUser[$ldapUserMatchAttribute][0]) || !is_string($ldapUser[$ldapUserMatchAttribute][0])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Invalid attribute \"%s\".", $n, $ldapUserDn, $ldapUserMatchAttribute));
+                        continue;
+                    }
+
+                    if (!$ldapUserMatch = trim($ldapUser[$ldapUserMatchAttribute][0])) {
+                        $this->logger->error(sprintf("User #%d [%s]: Empty attribute \"%s\".", $n, $ldapUserDn, $ldapUserMatchAttribute));
                         continue;
                     }
 
@@ -757,6 +807,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $users[$ldapUserName] = [
                         "dn"            => $ldapUserDn,
                         "username"      => $ldapUserName,
+                        "userMatchId"   => $ldapUserMatch,
                         "fullName"      => $ldapUserFullName,
                         "email"         => $ldapUserEmail,
                         "sshKeys"       => $ldapUserSshKeys,
@@ -866,6 +917,24 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                         if (!$ldapGroupMemberName = trim($ldapGroupMember)) {
                             $this->logger->warning(sprintf("Group #%d / member #%d: Empty member attribute \"%s\".", $n, $o, $ldapGroupMemberAttribute));
                             continue;
+                        }
+
+                        if ($ldapUserMatchAttribute !== $ldapUserAttribute) {
+                            // A userMatchAttribute exists that is different from the username. Look up the matching user name from list of users using the userMatchId
+                            $ldapUserMatchFound = false;
+                            foreach ($users as $userName => $user) {
+                                if ($user["userMatchId"] == $ldapGroupMemberName) {
+                                    $ldapGroupMemberName = $userName;
+                                    $this->logger->debug(sprintf("Group #%d / member #%d: User ID \"%s\" matched to user name \"%s\".", $n, $o, $user["userMatchId"], $userName));
+                                    $ldapUserMatchFound = true;
+                                    break;
+                                }
+                            }
+
+                            if (!$ldapUserMatchFound) {
+                                $this->logger->warning(sprintf("Group #%d / member #%d: No matching user name found for group member attribute \"%s\".", $n, $o, $ldapGroupMemberAttribute));
+                                continue;
+                            }
                         }
 
                         if ($this->in_array_i($ldapGroupMemberName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
@@ -1067,6 +1136,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
             $gitlabUserId = (is_array($gitlabUser) && isset($gitlabUser["id"]) && is_int($gitlabUser["id"])) ? $gitlabUser["id"] : sprintf("dry:%s", $ldapUserDetails["dn"]);
             $usersSync["new"][$gitlabUserId] = $gitlabUserName;
+
+            $this->gitlabApiCoolDown();
         }
 
         asort($usersSync["new"]);
@@ -1100,6 +1171,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             ])) : $this->logger->warning("Operation skipped due to dry run.");
 
             $usersSync["extra"][$gitlabUserId] = $gitlabUserName;
+
+            $this->gitlabApiCoolDown();
         }
 
         asort($usersSync["extra"]);
@@ -1153,6 +1226,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             ])) : $this->logger->warning("Operation skipped due to dry run.");
 
             $usersSync["update"][$gitlabUserId] = $gitlabUserName;
+
+            $this->gitlabApiCoolDown();
         }
 
         asort($usersSync["update"]);
@@ -1268,6 +1343,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
             $gitlabGroupId = (is_array($gitlabGroup) && isset($gitlabGroup["id"]) && is_int($gitlabGroup["id"])) ? $gitlabGroup["id"] : sprintf("dry:%s", $gitlabGroupPath);
             $groupsSync["new"][$gitlabGroupId] = $gitlabGroupName;
+
+            $this->gitlabApiCoolDown();
         }
 
         asort($groupsSync["new"]);
@@ -1317,6 +1394,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->remove($gitlabGroupId)) : $this->logger->warning("Operation skipped due to dry run.");
 
             $groupsSync["extra"][$gitlabGroupId] = $gitlabGroupName;
+
+            $this->gitlabApiCoolDown();
         }
 
         asort($groupsSync["extra"]);
@@ -1365,6 +1444,10 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
              */
 
             $groupsSync["update"][$gitlabGroupId] = $gitlabGroupName;
+
+            /* Not required until group updates can be detected as per above.
+            $this->gitlabApiCoolDown();
+             */
         }
 
         asort($groupsSync["update"]);
@@ -1507,6 +1590,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
                 $gitlabGroupMemberId = (is_array($gitlabGroupMember) && isset($gitlabGroupMember["id"]) && is_int($gitlabGroupMember["id"])) ? $gitlabGroupMember["id"] : sprintf("dry:%s:%d", $gitlabGroupPath, $gitlabUserId);
                 $userGroupMembersSync["new"][$gitlabUserId] = $gitlabUserName;
+
+                $this->gitlabApiCoolDown();
             }
 
             asort($userGroupMembersSync["new"]);
@@ -1525,6 +1610,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->removeMember($gitlabGroupId, $gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
 
                 $userGroupMembersSync["extra"][$gitlabUserId] = $gitlabUserName;
+
+                $this->gitlabApiCoolDown();
             }
 
             asort($userGroupMembersSync["extra"]);
@@ -1552,6 +1639,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
             asort($userGroupMembersSync["update"]);
             $this->logger->notice(sprintf("%d Gitlab group \"%s\" [%s] member(s) updated.", $userGroupMembersSync["updateNum"] = count($userGroupMembersSync["update"]), $gitlabGroupName, $gitlabGroupPath));
+
+            $this->gitlabApiCoolDown();
              */
         }
         // >> Handle group memberships
@@ -1614,5 +1703,18 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         }
 
         return $password;
+    }
+
+    /**
+     * Wait a bit of time between each Gitlab API request to avoid HTTP 500 errors when doing too many requests in a short time.
+     * @return void
+     */
+    private function gitlabApiCoolDown(): void
+    {
+        if ($this->dryRun) {
+            return; // Not required for dry runs
+        }
+
+        usleep(self::API_COOL_DOWN_USECONDS);
     }
 }
