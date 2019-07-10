@@ -503,8 +503,6 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $addProblem("warning", "gitlab->options->sshKeysImportMode not specified. (Assuming false.)");
                     $config["gitlab"]["options"]["sshKeysImportMode"] = false;
                 } elseif ($config["gitlab"]["options"]["sshKeysImportMode"]) {
-                    $config["gitlab"]["options"]["sshKeysImportMode"] = strtolower(trim($config["gitlab"]["options"]["sshKeysImportMode"]));
-
                     switch ($config["gitlab"]["options"]["sshKeysImportMode"]) {
                         case "insert":
                         case "merge":
@@ -1373,14 +1371,29 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $this->logger->notice(sprintf("%d Gitlab group(s) updated.", $groupsSync["updateNum"] = count($groupsSync["update"])));
         // >> Handle groups
 
-        // << Handle group memberships
-        $usersToSyncMembership  = ($usersSync["found"] + $usersSync["new"] + $usersSync["update"]);
-        asort($usersToSyncMembership);
-        $groupsToSyncMembership = ($groupsSync["found"] + $groupsSync["new"] + $groupsSync["update"]);
-        asort($groupsToSyncMembership);
+        // Build user/group synchronisation lists (for group membership, SSH keys, etc.)
+        $usersToSync        = ($usersSync["found"] + $usersSync["new"] + $usersSync["update"]);
+        $usersToSyncNum     = count($usersToSync);
+        asort($usersToSync);
 
+        $groupsToSync       = ($groupsSync["found"] + $groupsSync["new"] + $groupsSync["update"]);
+        $groupsToSyncNum    = count($groupsToSync);
+        asort($groupsToSync);
+
+        $this->logger->info(sprintf("%d user(s) and %d group(s) in the synchronisation lists.", $usersToSyncNum, $groupsToSyncNum));
+
+        // << Handle user SSH keys
+        /* Feature TBD :)
+        foreach ($usersToSync as $gitlabUserId => $gitlabUserName) {
+            $ldapUserSshKeys    = [];
+            $gitlabUserSshKeys  = $gitlab->api("users")->userKeys($gitlabUserId);
+        }
+         */
+        // >> Handle user SSH keys
+
+        // << Handle group memberships
         $this->logger->notice("Synchronising Gitlab group members with directory group members...");
-        foreach ($groupsToSyncMembership as $gitlabGroupId => $gitlabGroupName) {
+        foreach ($groupsToSync as $gitlabGroupId => $gitlabGroupName) {
             if ("Root" == $gitlabGroupName) {
                 $this->logger->info("Gitlab built-in root group will be ignored.");
                 continue; // The Gitlab root group should never be updated from LDAP.
@@ -1399,7 +1412,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
 
             $membersOfThisGroup = [];
-            foreach ($usersToSyncMembership as $gitlabUserId => $gitlabUserName) {
+            foreach ($usersToSync as $gitlabUserId => $gitlabUserName) {
                 if (!isset($ldapGroupsSafe[$gitlabGroupName]) || !is_array($ldapGroupsSafe[$gitlabGroupName])) {
                     $this->logger->warning(sprintf("Group \"%s\" doesn't appear to exist at path \"%s\". (Is this a sub-group? Sub-groups are not supported yet.)", $gitlabGroupName, $gitlabGroupPath));
                     continue;
