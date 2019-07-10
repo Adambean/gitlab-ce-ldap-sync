@@ -15,6 +15,8 @@ use Cocur\Slugify\Slugify;
 
 class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 {
+    const API_COOL_DOWN_USECONDS = 100000;
+
     private $logger = null;
     private $dryRun = false;
 
@@ -1091,11 +1093,10 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 "external"          => $ldapUserDetails["isExternal"],
             ])) : $this->logger->warning("Operation skipped due to dry run.");
 
-            //Adding too many users in too short time sometimes leads to a 500 error by the API
-            usleep(100000);
-
             $gitlabUserId = (is_array($gitlabUser) && isset($gitlabUser["id"]) && is_int($gitlabUser["id"])) ? $gitlabUser["id"] : sprintf("dry:%s", $ldapUserDetails["dn"]);
             $usersSync["new"][$gitlabUserId] = $gitlabUserName;
+
+            $this->gitlabApiCoolDown();
         }
 
         asort($usersSync["new"]);
@@ -1129,6 +1130,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             ])) : $this->logger->warning("Operation skipped due to dry run.");
 
             $usersSync["extra"][$gitlabUserId] = $gitlabUserName;
+
+            $this->gitlabApiCoolDown();
         }
 
         asort($usersSync["extra"]);
@@ -1182,6 +1185,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             ])) : $this->logger->warning("Operation skipped due to dry run.");
 
             $usersSync["update"][$gitlabUserId] = $gitlabUserName;
+
+            $this->gitlabApiCoolDown();
         }
 
         asort($usersSync["update"]);
@@ -1297,6 +1302,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
             $gitlabGroupId = (is_array($gitlabGroup) && isset($gitlabGroup["id"]) && is_int($gitlabGroup["id"])) ? $gitlabGroup["id"] : sprintf("dry:%s", $gitlabGroupPath);
             $groupsSync["new"][$gitlabGroupId] = $gitlabGroupName;
+
+            $this->gitlabApiCoolDown();
         }
 
         asort($groupsSync["new"]);
@@ -1346,6 +1353,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->remove($gitlabGroupId)) : $this->logger->warning("Operation skipped due to dry run.");
 
             $groupsSync["extra"][$gitlabGroupId] = $gitlabGroupName;
+
+            $this->gitlabApiCoolDown();
         }
 
         asort($groupsSync["extra"]);
@@ -1394,6 +1403,10 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
              */
 
             $groupsSync["update"][$gitlabGroupId] = $gitlabGroupName;
+
+            /* Not required until group updates can be detected as per above.
+            $this->gitlabApiCoolDown();
+             */
         }
 
         asort($groupsSync["update"]);
@@ -1521,6 +1534,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
                 $gitlabGroupMemberId = (is_array($gitlabGroupMember) && isset($gitlabGroupMember["id"]) && is_int($gitlabGroupMember["id"])) ? $gitlabGroupMember["id"] : sprintf("dry:%s:%d", $gitlabGroupPath, $gitlabUserId);
                 $userGroupMembersSync["new"][$gitlabUserId] = $gitlabUserName;
+
+                $this->gitlabApiCoolDown();
             }
 
             asort($userGroupMembersSync["new"]);
@@ -1539,6 +1554,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->removeMember($gitlabGroupId, $gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
 
                 $userGroupMembersSync["extra"][$gitlabUserId] = $gitlabUserName;
+
+                $this->gitlabApiCoolDown();
             }
 
             asort($userGroupMembersSync["extra"]);
@@ -1566,6 +1583,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
             asort($userGroupMembersSync["update"]);
             $this->logger->notice(sprintf("%d Gitlab group \"%s\" [%s] member(s) updated.", $userGroupMembersSync["updateNum"] = count($userGroupMembersSync["update"]), $gitlabGroupName, $gitlabGroupPath));
+
+            $this->gitlabApiCoolDown();
              */
         }
         // >> Handle group memberships
@@ -1628,5 +1647,18 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         }
 
         return $password;
+    }
+
+    /**
+     * Wait a bit of time between each Gitlab API request to avoid HTTP 500 errors when doing too many requests in a short time.
+     * @return void
+     */
+    private function gitlabApiCoolDown(): void
+    {
+        if ($this->dryRun) {
+            return; // Not required for dry runs
+        }
+
+        usleep(self::API_COOL_DOWN_USECONDS);
     }
 }
