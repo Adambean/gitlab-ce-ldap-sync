@@ -2,8 +2,8 @@
 # filing a request for help.
 
 ldap:
-    debug: false
-    wincompatibilitymode:               false
+    debug:                  false
+    winCompatibilityMode:   false
 
     server:
         host:                           ~

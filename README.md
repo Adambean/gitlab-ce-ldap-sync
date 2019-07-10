@@ -66,9 +66,9 @@ Enable this to show debugging information regarding LDAP connectivity. This is u
 
 Default: *false*
 
-#### wincompatibilitymode *(bool|null)*
+#### winCompatibilityMode *(bool|null)*
 
-In some windows AD instances, when user_dn is empy (for example when the whole AD is searched for users), LDAP queries fail with the message ldap_search(): Search: Operations error. This is further described in https://stackoverflow.com/questions/17742751/ldap-operations-error. The fix described there is applied when wincompatibilitymode is set to true. Since this has only been tested on one instance, it is recommended to leave this option at false and only activate it if you experience the error described above.
+In some Active Directory instances when "user_dn" is empty (for example when the whole AD is searched for users), LDAP queries fail with the message "ldap_search(): Search: Operations error.". This is further described in https://stackoverflow.com/questions/17742751/ldap-operations-error. The fix described there is applied when **winCompatibilityMode** is set to *true*. Since this has only been tested on one instance, it is recommended to leave this option at *false* and only activate it if you experience the error described above.
 
 Default: *false*
 
