@@ -373,7 +373,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $config["ldap"]["queries"]["userMatchAttribute"] = $config["ldap"]["queries"]["userUniqueAttribute"];
                 } else if (null === $config["ldap"]["queries"]["userMatchAttribute"]) {
                     $addProblem("error", "ldap->queries->userMatchAttribute not specified.");
-                }                
+                }
 
                 if (!isset($config["ldap"]["queries"]["groupDn"])) {
                     $addProblem("error", "ldap->queries->groupDn missing.");
@@ -578,8 +578,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      */
     private function getLdapUsersAndGroups(array $config, array &$users, int &$usersNum, array &$groups, int &$groupsNum): void
     {
-
-        $slugifyldapUsername = new Slugify([
+        $slugifyLdapUsername = new Slugify([
             "regexp"        => "/([^A-Za-z0-9]|-_\.)+/",
             "separator"     => ",",
             "lowercase"     => false,
@@ -881,7 +880,6 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                             //a usermatchAttribute exists that is different from the username, look up the matching user name from list of users using the usermatchid
                             $matchfound = false;
                             foreach ($users as $userName => $user) {
-                            
                                 if ($user["usermatchid"] == $ldapGroupMemberName) {
                                     $ldapGroupMemberName = $userName;
                                     $this->logger->debug(sprintf("Group #%d / member #%d: Userid \"%s\" matched to username \"%s\".", $n, $o, $user["usermatchid"], $userName));
