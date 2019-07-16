@@ -66,9 +66,9 @@ Enable this to show debugging information regarding LDAP connectivity. This is u
 
 Default: *false*
 
-#### wincompatibilitymode *(bool|null)*
+#### winCompatibilityMode *(bool|null)*
 
-In some windows AD instances, when user_dn is empy (for example when the whole AD is searched for users), LDAP queries fail with the message ldap_search(): Search: Operations error. This is further described in https://stackoverflow.com/questions/17742751/ldap-operations-error. The fix described there is applied when wincompatibilitymode is set to true. Since this has only been tested on one instance, it is recommended to leave this option at false and only activate it if you experience the error described above.
+In some Active Directory instances when "user_dn" is empty (for example when the whole AD is searched for users), LDAP queries fail with the message "ldap_search(): Search: Operations error.". This is further described in https://stackoverflow.com/questions/17742751/ldap-operations-error. The fix described there is applied when **winCompatibilityMode** is set to *true*. Since this has only been tested on one instance, it is recommended to leave this option at *false* and only activate it if you experience the error described above.
 
 Default: *false*
 
@@ -153,6 +153,14 @@ Specify the attribute used to uniquely identify a user by their user name. Their
 
 Default: "uid"
 
+##### userMatchAttribute *(string|null)*
+
+By default, it is assumed that the **userUniqueAttribute** is a user name that can be used to unambiguously determine group membership of individual persons as well as being used for login credentials. If this is the case with your LDAP structure, set **userMatchAttribute** to be empty.
+
+If that is not the case, **userMatchAttribute** can be used to separate these two functions. Specify **userMatchAttribute** to the feature of your user that determines his membership in a group and **userUniqueAttribute** to the user name attribute used for Gitlab login credentials. For instance, in some Microsoft Active Directory versions, groups possess a "member" attribute that lists the "distinguishedName" attributes of each member of the group. The user name however is a different attribute of each user being attributed to that group. In this case, set **userMatchAttribute** to "distinguishedName" and **userUniqueAttribute** to your user name attribute.
+
+Default: Same as **userNameAttribute**
+
 ##### userNameAttribute *(string|null)*
 
 Specify the attribute used for the user's full real name.
@@ -164,10 +172,6 @@ Default: "cn"
 Specify the attribute used for the user's email address. (If there are multiple values only the first will be used.)
 
 Default: "mail"
-
-##### userMatchAttribute *(string|null)*
-
-By default, it is assumed that the userUniqueAttribute is a user name that can be used to unambiguously determine group membership of individual persons as well as being used for login credentials. If this is the case with your LDAP structure, set userMatchAttribute to be empty. If that is not the case, userMatchAttribute can be used to separate these two functions. Specify userMatchAttribute to the feature of your user that determines his membership in a group and userUniqueAttribute to the username attribute used for gitlab login credentials. For instance, in some Microsoft Active Directory versions, groups possess a 'member' attribute that lists the 'distinguishedName' attributes of each member of the group. the user name however is a different attribute of each user being attributed to that group. In this case, set userMatchAttribute to 'distinguishedName' and userUniqueAttribute to your username attribute.
 
 ##### groupDn *(string|null)*
 

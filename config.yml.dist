@@ -2,8 +2,8 @@
 # filing a request for help.
 
 ldap:
-    debug: false
-    wincompatibilitymode:               false
+    debug:                  false
+    winCompatibilityMode:   false
 
     server:
         host:                           ~
@@ -20,9 +20,9 @@ ldap:
         userDn:                         ~
         userFilter:                     "(objectClass=inetOrgPerson)"
         userUniqueAttribute:            "uid"
+        userMatchAttribute:             "uid"
         userNameAttribute:              "cn"
         userEmailAttribute:             "mail"
-		userMatchAttribute:             "uid"
 
         groupDn:                        ~
         groupFilter:                    "(objectClass=groupOfUniqueNames)"
