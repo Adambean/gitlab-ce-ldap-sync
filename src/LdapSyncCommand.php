@@ -880,22 +880,33 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                             continue;
                         }
 
-                        if ($ldapUserMatchAttribute !== $ldapUserAttribute) {
-                            // A userMatchAttribute exists that is different from the username. Look up the matching user name from list of users using the userMatchId
-                            $ldapUserMatchFound = false;
+                        $ldapUserMatchFound = false;
+                        if ($this->in_array_i($ldapGroupMemberAttribute, ["memberUid"])) {
+                            if ($ldapUserMatchAttribute !== $ldapUserAttribute) {
+                                // A userMatchAttribute exists that is different from the username. Look up the matching user name from list of users using the userMatchId
+                                foreach ($users as $userName => $user) {
+                                    if ($user["userMatchId"] == $ldapGroupMemberName) {
+                                        $ldapGroupMemberName = $userName;
+                                        $this->logger->debug(sprintf("Group #%d / member #%d: User ID \"%s\" matched to user name \"%s\".", $n, $o, $user["userMatchId"], $userName));
+                                        $ldapUserMatchFound = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        } else if ($this->in_array_i($ldapGroupMemberAttribute, ["member", "uniqueMember"])) {
                             foreach ($users as $userName => $user) {
-                                if ($user["userMatchId"] == $ldapGroupMemberName) {
+                                if ($user["dn"] == $ldapGroupMemberName) {
                                     $ldapGroupMemberName = $userName;
-                                    $this->logger->debug(sprintf("Group #%d / member #%d: User ID \"%s\" matched to user name \"%s\".", $n, $o, $user["userMatchId"], $userName));
+                                    $this->logger->debug(sprintf("Group #%d / member #%d: User ID \"%s\" matched to user name \"%s\".", $n, $o, $user["dn"], $userName));
                                     $ldapUserMatchFound = true;
                                     break;
                                 }
                             }
+                        }
 
-                            if (!$ldapUserMatchFound) {
-                                $this->logger->warning(sprintf("Group #%d / member #%d: No matching user name found for group member attribute \"%s\".", $n, $o, $ldapGroupMemberAttribute));
-                                continue;
-                            }
+                        if (!$ldapUserMatchFound) {
+                            $this->logger->warning(sprintf("Group #%d / member #%d: No matching user name found for group member attribute \"%s\".", $n, $o, $ldapGroupMemberAttribute));
+                            continue;
                         }
 
                         if ($this->in_array_i($ldapGroupMemberName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
