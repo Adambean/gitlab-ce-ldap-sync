@@ -1040,8 +1040,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     continue;
                 }
 
-                if ("root" == $gitlabUserName) {
-                    $this->logger->info("Gitlab built-in root user will be ignored.");
+                if ($this->in_array_i($gitlabUserName, ["root", "ghost"])) {
+                    $this->logger->info(sprintf("Gitlab built-in %s user will be ignored.", $gitlabUserName));
                     continue; // The Gitlab root user should never be updated from LDAP.
                 }
 
