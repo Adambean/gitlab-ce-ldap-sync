@@ -159,6 +159,8 @@ By default, it is assumed that the **userUniqueAttribute** is a user name that c
 
 If that is not the case, **userMatchAttribute** can be used to separate these two functions. Specify **userMatchAttribute** to the feature of your user that determines his membership in a group and **userUniqueAttribute** to the user name attribute used for Gitlab login credentials. For instance, in some Microsoft Active Directory versions, groups possess a "member" attribute that lists the "distinguishedName" attributes of each member of the group. The user name however is a different attribute of each user being attributed to that group. In this case, set **userMatchAttribute** to "distinguishedName" and **userUniqueAttribute** to your user name attribute.
 
+This attribute only makes sense if **groupMemberAttribute** is "memberUid".
+
 Default: Same as **userNameAttribute**
 
 ##### userNameAttribute *(string|null)*
@@ -203,9 +205,11 @@ Default: "cn"
 
 ##### groupMemberAttribute *(string|null)*
 
-Specify the attribute for group objects defining which users are a member of it. The values must be user names in their simple form matching the values you'd get with "usersUniqueAttribute", and not containing any structural information such as full distinguished names of users.
+Specify the attribute for group objects defining which users are a member of it.
+Depending on the class of group, possible values can be "memberUid", "member", or "uniqueMember".
 
-This is typically "memberUid" for Microsoft Active Directory, OpenLDAP, and 389-DS.
+* In case "memberUid" is used, the values must be user names in their simple form matching the values you'd get with "usersUniqueAttribute", and not containing any structural information such as full distinguished names of users.
+* In case "member" or "uniqueMember" is used, the values must be valid distinguished names of users.
 
 Default: "memberUid"
 
