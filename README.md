@@ -206,7 +206,8 @@ Default: "cn"
 ##### groupMemberAttribute *(string|null)*
 
 Specify the attribute for group objects defining which users are a member of it.
-Depending on the class of group, possible values can be "memberUid", "member" or "uniqueMember".
+Depending on the class of group, possible values can be "memberUid", "member", or "uniqueMember".
+
 * In case "memberUid" is used, the values must be user names in their simple form matching the values you'd get with "usersUniqueAttribute", and not containing any structural information such as full distinguished names of users.
 * In case "member" or "uniqueMember" is used, the values must be valid distinguished names of users.
 
