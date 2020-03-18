@@ -583,7 +583,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
     private function getLdapUsersAndGroups(array $config, array &$users, int &$usersNum, array &$groups, int &$groupsNum): void
     {
         $slugifyLdapUsername = new Slugify([
-            "regexp"        => "/([^A-Za-z0-9]|-_\.)+/",
+            "regexp"        => "/([^A-Za-z0-9-_\.])+/",
             "separator"     => ",",
             "lowercase"     => false,
             "trim"          => true,
