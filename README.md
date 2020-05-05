@@ -23,6 +23,7 @@ Features implemented:
 Not implemented:
 
 * Sub-group handling
+* SSH key importing *(in progress)*
 
 If in doubt use the dry run `-d` option to prevent writing to Gitlab first, combined with `-vv` to see exactly what would happen.
 
