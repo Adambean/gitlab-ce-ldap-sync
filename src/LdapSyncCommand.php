@@ -28,7 +28,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
     {
         $this
             ->setName("ldap:sync")
-            ->setDescription("Sync LDAP users and groups with a Gitlab CE installation.")
+            ->setDescription("Sync LDAP users and groups with a Gitlab CE/EE self-hosted installation.")
             ->addOption("dryrun", "d", InputOption::VALUE_NONE, "Dry run: Do not persist any changes.")
             ->addArgument("instance", InputArgument::OPTIONAL, "Sync with a specific instance, or leave unspecified to work with all.")
         ;
@@ -607,7 +607,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
     private function getLdapUsersAndGroups(array $config, array &$users, int &$usersNum, array &$groups, int &$groupsNum): void
     {
         $slugifyLdapUsername = new Slugify([
-            "regexp"        => "/([^A-Za-z0-9]|-_\.)+/",
+            "regexp"        => "/([^A-Za-z0-9-_\.])+/",
             "separator"     => ",",
             "lowercase"     => false,
             "trim"          => true,
@@ -921,18 +921,15 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
                         $ldapUserMatchFound = false;
                         if ($this->in_array_i($ldapGroupMemberAttribute, ["memberUid"])) {
-                            if ($ldapUserMatchAttribute !== $ldapUserAttribute) {
-                                // A userMatchAttribute exists that is different from the username. Look up the matching user name from list of users using the userMatchId
-                                foreach ($users as $userName => $user) {
-                                    if ($user["userMatchId"] == $ldapGroupMemberName) {
-                                        $ldapGroupMemberName = $userName;
-                                        $this->logger->debug(sprintf("Group #%d / member #%d: User ID \"%s\" matched to user name \"%s\".", $n, $o, $user["userMatchId"], $userName));
-                                        $ldapUserMatchFound = true;
-                                        break;
-                                    }
+                            foreach ($users as $userName => $user) {
+                                if (($ldapUserMatchAttribute === $ldapUserAttribute ? $userName : $user["userMatchId"]) == $ldapGroupMemberName) {
+                                    $ldapGroupMemberName = $userName;
+                                    $this->logger->debug(sprintf("Group #%d / member #%d: User ID \"%s\" matched to user name \"%s\".", $n, $o, $user["userMatchId"], $userName));
+                                    $ldapUserMatchFound = true;
+                                    break;
                                 }
                             }
-                        } else if ($this->in_array_i($ldapGroupMemberAttribute, ["member", "uniqueMember"])) {
+                        } elseif ($this->in_array_i($ldapGroupMemberAttribute, ["member", "uniqueMember"])) {
                             foreach ($users as $userName => $user) {
                                 if ($user["dn"] == $ldapGroupMemberName) {
                                     $ldapGroupMemberName = $userName;
