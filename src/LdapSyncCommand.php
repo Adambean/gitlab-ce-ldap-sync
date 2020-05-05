@@ -890,7 +890,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                                     break;
                                 }
                             }
-                        } else if ($this->in_array_i($ldapGroupMemberAttribute, ["member", "uniqueMember"])) {
+                        } elseif ($this->in_array_i($ldapGroupMemberAttribute, ["member", "uniqueMember"])) {
                             foreach ($users as $userName => $user) {
                                 if ($user["dn"] == $ldapGroupMemberName) {
                                     $ldapGroupMemberName = $userName;
