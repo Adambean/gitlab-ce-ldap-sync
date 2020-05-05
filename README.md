@@ -142,8 +142,12 @@ Default: *null*
 
 Specify a search filter for finding user objects within the above DN.
 
-* For Microsoft Active Directory this is typically "(&(objectCategory=person)(objectClass=user))", though if you want to exclude disabled users, use "(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))".
-* For OpenLDAP and 389-DS this is typically "(objectClass=inetOrgPerson)", though if you want to exclude 389-DS disabled users, use "(&(objectClass=inetOrgPerson)(!(nsAccountLock=true)))".
+* For Microsoft Active Directory this is typically "(&(objectCategory=person)(objectClass=user))".
+  * If you want to exclude disabled users use "(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))".
+* For OpenLDAP and 389-DS this is typically "(objectClass=inetOrgPerson)".
+  * If you want to exclude disabled users on OpenLDAP use "(&(objectClass=inetOrgPerson)(objectClass=posixAccount)(shadowExpire=99999))". -- This requires your user objects to use the "posixAccount" class.
+  * If you want to exclude disabled users on 389-DS use "(&(objectClass=inetOrgPerson)(!(nsAccountLock=true)))".
+  * For both also consider excluding guest accounts with "(!(uid=nobody))(!(gidNumber=65534))" mixed into the AND condition.
 
 Default: "(objectClass=inetOrgPerson)"
 
