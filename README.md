@@ -1,8 +1,8 @@
-# LDAP users and groups sync script for Gitlab-CE
+# LDAP users and groups sync script for Gitlab-CE and Gitlab-EE
 
-This nifty little PHP-CLI tool will synchronise users and user groups from an LDAP server to Gitlab community edition instance(s).
+This nifty little PHP-CLI tool will synchronise users and user groups from an LDAP server to Gitlab community edition instance(s). This also works on enterprise editions on the free tier, of which has identical functionality to the community edition.
 
-Though this functionality is available out of the box with Gitlab enterprise edition the pricing model is completely infeasible for teams of hobbyists working on non-revenue based projects but need to use a centralised authentication base.
+Though this functionality is available out of the box with (non-free) Gitlab enterprise edition the pricing model is completely infeasible for teams of hobbyists working on non-revenue based projects but need to use a centralised authentication base.
 
 As a bonus it can also do a light rake of LDAP users not currently in Gitlab, so those that haven't signed in for their first time can still have projects and permissions assigned to them. **This may make the tool unsuitable git Gitlab-EE as this would certainly impact its licensing fees!**
 
@@ -10,7 +10,7 @@ As a bonus it can also do a light rake of LDAP users not currently in Gitlab, so
 
 **Seriously.**
 
-Though all of this tool's features are now implemented, very limited testing has happened, so don't expect a perfect experience. You should therefore only use this on test Gitlab CE instances, or if you must use this on your production environment, at the very least take a backup of your Gitlab data before using this.
+Though all of this tool's features are now implemented, very limited testing has happened, so don't expect a perfect experience. You should therefore only use this on test Gitlab CE/EE instances, or if you must use this on your production environment, at the very least take a backup of your Gitlab data before using this.
 
 Features implemented:
 
@@ -41,7 +41,7 @@ Requirements for running this tool from a management station:
 * [PHP's LDAP functions](http://php.net/manual/en/book.ldap.php): Usually installed with PHP as standard, but the LDAP module/functions may not be enabled by default.
 * [Composer](https://getcomposer.org/): Available to most Linux distributions via `apt-get` or `yum`, or manually download it as `composer.phar` alongside this tool.
 * LDAP instance: Used for Gitlab's authentication. It can (likely) be Microsoft Active Directory, OpenLDAP, 389-DS (including FreeIPA), and any other LDAP system, though **most of my testing is with 389-DS (without FreeIPA)**.
-* [Gitlab community edition](https://gitlab.com/gitlab-org/gitlab-ce/): This must be configured to authenticate against an LDAP instance already.
+* [Gitlab community edition](https://about.gitlab.com/install/?version=ce) or [Gitlab community edition](https://about.gitlab.com/install/?version=ee) self-hosted: This must be configured to authenticate against an LDAP instance already.
 
 ## Installing
 
@@ -219,7 +219,7 @@ Default: "memberUid"
 
 ### gitlab
 
-This section configures how to communicate with your Gitlab-CE instance.
+This section configures how to communicate with your Gitlab-CE/EE instance.
 
 #### options
 

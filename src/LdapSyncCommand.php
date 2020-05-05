@@ -28,7 +28,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
     {
         $this
             ->setName("ldap:sync")
-            ->setDescription("Sync LDAP users and groups with a Gitlab CE installation.")
+            ->setDescription("Sync LDAP users and groups with a Gitlab CE/EE self-hosted installation.")
             ->addOption("dryrun", "d", InputOption::VALUE_NONE, "Dry run: Do not persist any changes.")
             ->addArgument("instance", InputArgument::OPTIONAL, "Sync with a specific instance, or leave unspecified to work with all.")
         ;
