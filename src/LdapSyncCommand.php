@@ -1048,9 +1048,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     continue;
                 }
 
-                if ($this->in_array_i($gitlabUserName, ["root", "ghost"])) {
+                if ($this->in_array_i($gitlabUserName, $this->getBuiltInUserNames())) {
                     $this->logger->info(sprintf("Gitlab built-in %s user will be ignored.", $gitlabUserName));
-                    continue; // The Gitlab root user should never be updated from LDAP.
+                    continue;
                 }
 
                 $this->logger->info(sprintf("Found Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
@@ -1069,9 +1069,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // Create directory users of which don't exist in Gitlab
         $this->logger->notice("Creating directory users of which don't exist in Gitlab...");
         foreach ($ldapUsers as $ldapUserName => $ldapUserDetails) {
-            if ("root" == $ldapUserName) {
-                $this->logger->info("Gitlab built-in root user will be ignored.");
-                continue; // The Gitlab root user should never be updated from LDAP.
+            if ($this->in_array_i($ldapUserName, $this->getBuiltInUserNames())) {
+                $this->logger->info(sprintf("Gitlab built-in %s user will be ignored.", $ldapUserName));
+                continue;
             }
 
             if ($this->in_array_i($ldapUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
@@ -1115,9 +1115,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // Disable Gitlab users of which don't exist in directory
         $this->logger->notice("Disabling Gitlab users of which don't exist in directory...");
         foreach ($usersSync["found"] as $gitlabUserId => $gitlabUserName) {
-            if ("root" == $gitlabUserName) {
-                $this->logger->info("Gitlab built-in root user will be ignored.");
-                continue; // The Gitlab root user should never be updated from LDAP.
+            if ($this->in_array_i($gitlabUserName, $this->getBuiltInUserNames())) {
+                $this->logger->info(sprintf("Gitlab built-in %s user will be ignored.", $gitlabUserName));
+                continue;
             }
 
             if ($this->in_array_i($gitlabUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
@@ -1154,9 +1154,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
-            if ("root" == $gitlabUserName) {
-                $this->logger->info("Gitlab built-in root user will be ignored.");
-                continue; // The Gitlab root user should never be updated from LDAP.
+            if ($this->in_array_i($gitlabUserName, $this->getBuiltInUserNames())) {
+                $this->logger->info(sprintf("Gitlab built-in %s user will be ignored.", $gitlabUserName));
+                continue;
             }
 
             if ($this->in_array_i($gitlabUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
@@ -1657,6 +1657,15 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         }
 
         return $password;
+    }
+
+    /**
+     * Get a list of built-in user names, of which should be ignored by this application.
+     * @return array
+     */
+    private function getBuiltInUserNames()
+    {
+        return ["root", "ghost", "support-bot", "alert-bot"];
     }
 
     /**
