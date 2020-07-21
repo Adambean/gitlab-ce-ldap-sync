@@ -1090,19 +1090,28 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $gitlabUserPassword = $this->generateRandomPassword(12);
             $this->logger->debug(sprintf("Password for Gitlab user \"%s\" [%s] will be: %s", $gitlabUserName, $ldapUserDetails["dn"], $gitlabUserPassword));
 
-            !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->create($ldapUserDetails["email"], $gitlabUserPassword, [
-                "username"          => $gitlabUserName,
-                "reset_password"    => false,
-                "name"              => $ldapUserDetails["fullName"],
-                "extern_uid"        => $ldapUserDetails["dn"],
-                "provider"          => $gitlabConfig["ldapServerName"],
-                "public_email"      => $ldapUserDetails["email"],
-                "admin"             => $ldapUserDetails["isAdmin"],
-                "can_create_group"  => $ldapUserDetails["isAdmin"],
-                "skip_confirmation" => true,
-                "external"          => $ldapUserDetails["isExternal"],
-            ])) : $this->logger->warning("Operation skipped due to dry run.");
-
+            try {
+                !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->create($ldapUserDetails["email"], $gitlabUserPassword, [
+                    "username"          => $gitlabUserName,
+                    "reset_password"    => false,
+                    "name"              => $ldapUserDetails["fullName"],
+                    "extern_uid"        => $ldapUserDetails["dn"],
+                    "provider"          => $gitlabConfig["ldapServerName"],
+                    "public_email"      => $ldapUserDetails["email"],
+                    "admin"             => $ldapUserDetails["isAdmin"],
+                    "can_create_group"  => $ldapUserDetails["isAdmin"],
+                    "skip_confirmation" => true,
+                    "external"          => $ldapUserDetails["isExternal"],
+                ])) : $this->logger->warning("Operation skipped due to dry run.");
+            } catch (\Exception $e) {
+                //Script continues to run for errors that are due to misconfiguration of individual users in the AD
+                if (strcmp($e->getMessage(),"Email has already been taken") == 0) {
+                    $this->logger->error(sprintf("Gitlab user \"%s\" [%s] was not created, Email is already used by another account!", $gitlabUserName, $ldapUserDetails["dn"]));
+                    $this->gitlabApiCoolDown();
+                    continue;
+                }
+                throw e;
+            }
             $gitlabUserId = (is_array($gitlabUser) && isset($gitlabUser["id"]) && is_int($gitlabUser["id"])) ? $gitlabUser["id"] : sprintf("dry:%s", $ldapUserDetails["dn"]);
             $usersSync["new"][$gitlabUserId] = $gitlabUserName;
 
