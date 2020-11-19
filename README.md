@@ -103,7 +103,7 @@ The encryption protocol.
 
 Leaving this null will assume an unencrypted connection.
 
-If the server isn't "localhost" and STARTTLS or LDAPS is unavailable due to whatever certificate issues you have highly consider using an SSH tunnel with port forwarding to make a secure link instead. *(How to do that is beyond the scope of this tool.)*
+If the server isn't "localhost" and STARTTLS or LDAPS is unavailable due to whatever certificate issues you have, highly consider using an SSH tunnel with port forwarding to make a secure link instead. *(How to do that is beyond the scope of this tool.)*
 
 ##### bindDn *(string|null)*
 
