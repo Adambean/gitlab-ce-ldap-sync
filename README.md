@@ -6,9 +6,9 @@ Though this functionality is available out of the box with (non-free) Gitlab ent
 
 As a bonus it can also do a light rake of LDAP users not currently in Gitlab, so those that haven't signed in for their first time can still have projects and permissions assigned to them. **This may make the tool unsuitable git Gitlab-EE as this would certainly impact its licensing fees!**
 
-## **THIS TOOL IS NOT QUALITY ASSURED YET. DO NOT USE IT IN A PRODUCTION ENVIRONMENT.**
+## **This tool has had basic community quality assurance.**
 
-**Seriously.**
+**Use in production environment at your own risk.**
 
 Though all of this tool's features are now implemented, very limited testing has happened, so don't expect a perfect experience. You should therefore only use this on test Gitlab CE/EE instances, or if you must use this on your production environment, at the very least take a backup of your Gitlab data before using this.
 
