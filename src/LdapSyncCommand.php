@@ -347,6 +347,14 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     // This is OK: Users will be looked for from the directory root.
                 }
 
+                if (
+                    !empty($config["ldap"]["queries"]["baseDn"]) &&
+                    !empty($config["ldap"]["queries"]["userDn"]) &&
+                    strripos($config["ldap"]["queries"]["userDn"], $config["ldap"]["queries"]["baseDn"]) === (strlen($config["ldap"]["queries"]["userDn"]) - strlen($config["ldap"]["queries"]["baseDn"]))
+                ) {
+                    $addProblem("warning", "ldap->queries->userDn wrongly ends with ldap->queries->baseDn, this could cause user objects to not be found.");
+                }
+
                 if (!isset($config["ldap"]["queries"]["userFilter"])) {
                     $addProblem("error", "ldap->queries->userFilter missing.");
                 } elseif (!($config["ldap"]["queries"]["userFilter"] = trim($config["ldap"]["queries"]["userFilter"]))) {
@@ -384,6 +392,14 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 } elseif (!($config["ldap"]["queries"]["groupDn"] = trim($config["ldap"]["queries"]["groupDn"]))) {
                     // $addProblem("error", "ldap->queries->groupDn not specified.");
                     // This is OK: Groups will be looked for from the directory root.
+                }
+
+                if (
+                    !empty($config["ldap"]["queries"]["baseDn"]) &&
+                    !empty($config["ldap"]["queries"]["groupDn"]) &&
+                    strripos($config["ldap"]["queries"]["groupDn"], $config["ldap"]["queries"]["baseDn"]) === (strlen($config["ldap"]["queries"]["groupDn"]) - strlen($config["ldap"]["queries"]["baseDn"]))
+                ) {
+                    $addProblem("warning", "ldap->queries->groupDn wrongly ends with ldap->queries->baseDn, this could cause user objects to not be found.");
                 }
 
                 if (!isset($config["ldap"]["queries"]["groupFilter"])) {
