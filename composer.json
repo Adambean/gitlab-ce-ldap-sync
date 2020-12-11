@@ -19,5 +19,8 @@
     },
     "config": {
         "sort-packages": true
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^0.12.59"
     }
 }
