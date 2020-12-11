@@ -8,14 +8,6 @@ if ("cli" !== php_sapi_name()) {
 
 require_once __DIR__ . "/../vendor/autoload.php";
 
-define("ROOT_DIR",              sprintf("%s/../", __DIR__));
-
-define("CONFIG_FILE_NAME",      "config.yml");
-define("CONFIG_FILE_PATH",      sprintf("%s/%s", ROOT_DIR, CONFIG_FILE_NAME));
-
-define("CONFIG_FILE_DIST_NAME", sprintf("%s.dist", CONFIG_FILE_NAME));
-define("CONFIG_FILE_DIST_PATH", sprintf("%s/%s", ROOT_DIR, CONFIG_FILE_DIST_NAME));
-
 use Symfony\Component\Console\Application;
 
 use AdamReece\GitlabCeLdapSync\LdapSyncCommand;
