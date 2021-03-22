@@ -15,10 +15,57 @@ use Cocur\Slugify\Slugify;
 
 class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 {
+    /*
+     * -------------------------------------------------------------------------
+     * Constants
+     * -------------------------------------------------------------------------
+     */
+
+    const CONFIG_FILE_NAME      = "config.yml";
+    const CONFIG_FILE_DIST_NAME = "config.yml.dist";
+
     const API_COOL_DOWN_USECONDS = 100000;
 
+
+
+    /*
+     * -------------------------------------------------------------------------
+     * Variables
+     * -------------------------------------------------------------------------
+     */
+
+    /**
+     * @var ConsoleLogger Console logger interface
+     */
     private $logger = null;
+
+    /**
+     * @var bool Debug mode
+     */
     private $dryRun = false;
+
+    /**
+     * @var string Application root directory
+     */
+    private $rootDir = null;
+
+    /**
+     * @var string User's configuration file pathname.
+     */
+    private $configFilePathname = null;
+
+    /**
+     * @var string Distribution configuration file pathname.
+     */
+    private $configFileDistPathname = null;
+
+
+
+    /*
+     * -------------------------------------------------------------------------
+     * Command functions
+     * -------------------------------------------------------------------------
+     */
 
     /**
      * Configures the current command.
@@ -46,11 +93,15 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $output->writeln("LDAP users and groups sync script for Gitlab-CE\n");
 
         // Prepare
-        if ($this->dryRun = boolval($input->getOption("dryrun", false))) {
+        if ($this->dryRun = boolval($input->getOption("dryrun"))) {
             $this->logger->warning("Dry run enabled: No changes will be persisted.");
         }
 
-        foreach([
+        $this->rootDir                  = sprintf("%s/../", __DIR__);
+        $this->configFilePathname       = sprintf("%s/%s", $this->rootDir, self::CONFIG_FILE_NAME);
+        $this->configFileDistPathname   = sprintf("%s/%s", $this->rootDir, self::CONFIG_FILE_DIST_NAME);
+
+        foreach ([
             "ldap_connect",
             "ldap_bind",
             "ldap_set_option",
@@ -68,19 +119,19 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
 
         // Load configuration
-        $this->logger->notice("Loading configuration.", ["file" => CONFIG_FILE_PATH]);
+        $this->logger->notice("Loading configuration.", ["file" => $this->configFilePathname]);
 
-        if (!($config = $this->loadConfig(CONFIG_FILE_PATH))) {
-            $this->logger->debug("Checking if default configuration exists but user configuration does not.", ["file" => CONFIG_FILE_DIST_PATH]);
-            if (file_exists(CONFIG_FILE_DIST_PATH) && !file_exists(CONFIG_FILE_PATH)) {
+        if (!($config = $this->loadConfig($this->configFilePathname))) {
+            $this->logger->debug("Checking if default configuration exists but user configuration does not.", ["file" => $this->configFileDistPathname]);
+            if (file_exists($this->configFileDistPathname) && !file_exists($this->configFilePathname)) {
                 $this->logger->warning("Dist config found but user config not.");
-                $output->writeln(sprintf("It appears that you have not created a configuration yet.\nPlease duplicate \"%s\" as \"%s\", then modify it for your\nenvironment.", CONFIG_FILE_DIST_NAME, CONFIG_FILE_NAME));
+                $output->writeln(sprintf("It appears that you have not created a configuration yet.\nPlease duplicate \"%s\" as \"%s\", then modify it for your\nenvironment.", self::CONFIG_FILE_DIST_NAME, self::CONFIG_FILE_NAME));
             }
 
             return 1;
         }
 
-        $this->logger->notice("Loaded configuration.", ["file" => CONFIG_FILE_PATH, "config" => $config]);
+        $this->logger->notice("Loaded configuration.", ["file" => $this->configFilePathname, "config" => $config]);
 
 
 
@@ -135,7 +186,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // Deploy to Gitlab instances
         $this->logger->notice("Deploying users and groups to Gitlab instances.");
 
-        $gitlabInstanceOnly = trim($input->getArgument("instance", null));
+        $gitlabInstanceOnly = trim($input->getArgument("instance"));
         foreach ($config["gitlab"]["instances"] as $gitlabInstance => $gitlabConfig) {
             if ($gitlabInstanceOnly && $gitlabInstance !== $gitlabInstanceOnly) {
                 $this->logger->debug(sprintf("Skipping instance \"%s\", doesn't match the argument specified.", $gitlabInstance));
@@ -157,6 +208,14 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // Finished
         return 0;
     }
+
+
+
+    /*
+     * -------------------------------------------------------------------------
+     * Helper functions
+     * -------------------------------------------------------------------------
+     */
 
     /**
      * Load configuration.
@@ -251,7 +310,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             if (!isset($config["ldap"]["debug"])) {
                 $addProblem("warning", "ldap->debug missing. (Assuming false.)");
                 $config["ldap"]["debug"] = false;
-            } elseif (null === $config["ldap"]["debug"]) {
+            } elseif ("" === $config["ldap"]["debug"]) {
                 $addProblem("warning", "ldap->debug not specified. (Assuming false.)");
                 $config["ldap"]["debug"] = false;
             } elseif (!is_bool($config["ldap"]["debug"])) {
@@ -347,6 +406,14 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     // This is OK: Users will be looked for from the directory root.
                 }
 
+                if (
+                    !empty($config["ldap"]["queries"]["baseDn"]) &&
+                    !empty($config["ldap"]["queries"]["userDn"]) &&
+                    strripos($config["ldap"]["queries"]["userDn"], $config["ldap"]["queries"]["baseDn"]) === (strlen($config["ldap"]["queries"]["userDn"]) - strlen($config["ldap"]["queries"]["baseDn"]))
+                ) {
+                    $addProblem("warning", "ldap->queries->userDn wrongly ends with ldap->queries->baseDn, this could cause user objects to not be found.");
+                }
+
                 if (!isset($config["ldap"]["queries"]["userFilter"])) {
                     $addProblem("error", "ldap->queries->userFilter missing.");
                 } elseif (!($config["ldap"]["queries"]["userFilter"] = trim($config["ldap"]["queries"]["userFilter"]))) {
@@ -386,6 +453,14 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     // This is OK: Groups will be looked for from the directory root.
                 }
 
+                if (
+                    !empty($config["ldap"]["queries"]["baseDn"]) &&
+                    !empty($config["ldap"]["queries"]["groupDn"]) &&
+                    strripos($config["ldap"]["queries"]["groupDn"], $config["ldap"]["queries"]["baseDn"]) === (strlen($config["ldap"]["queries"]["groupDn"]) - strlen($config["ldap"]["queries"]["baseDn"]))
+                ) {
+                    $addProblem("warning", "ldap->queries->groupDn wrongly ends with ldap->queries->baseDn, this could cause user objects to not be found.");
+                }
+
                 if (!isset($config["ldap"]["queries"]["groupFilter"])) {
                     $addProblem("error", "ldap->queries->groupFilter missing.");
                 } elseif (!($config["ldap"]["queries"]["groupFilter"] = trim($config["ldap"]["queries"]["groupFilter"]))) {
@@ -415,7 +490,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             if (!isset($config["gitlab"]["debug"])) {
                 $addProblem("warning", "gitlab->debug missing. (Assuming false.)");
                 $config["gitlab"]["debug"] = false;
-            } elseif (null === $config["gitlab"]["debug"]) {
+            } elseif ("" === $config["gitlab"]["debug"]) {
                 $addProblem("warning", "gitlab->debug not specified. (Assuming false.)");
                 $config["gitlab"]["debug"] = false;
             } elseif (!is_bool($config["gitlab"]["debug"])) {
@@ -429,7 +504,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["userNamesToIgnore"])) {
                     $addProblem("warning", "gitlab->options->userNamesToIgnore missing. (Assuming none.)");
                     $config["gitlab"]["options"]["userNamesToIgnore"] = [];
-                } elseif (null === $config["gitlab"]["options"]["userNamesToIgnore"]) {
+                } elseif ("" === $config["gitlab"]["options"]["userNamesToIgnore"]) {
                     // $addProblem("warning", "gitlab->options->userNamesToIgnore not specified. (Assuming none.)");
                     $config["gitlab"]["options"]["userNamesToIgnore"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["userNamesToIgnore"])) {
@@ -451,7 +526,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["groupNamesToIgnore"])) {
                     $addProblem("warning", "gitlab->options->groupNamesToIgnore missing. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesToIgnore"] = [];
-                } elseif (null === $config["gitlab"]["options"]["groupNamesToIgnore"]) {
+                } elseif ("" === $config["gitlab"]["options"]["groupNamesToIgnore"]) {
                     // $addProblem("warning", "gitlab->options->groupNamesToIgnore not specified. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesToIgnore"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["groupNamesToIgnore"])) {
@@ -473,7 +548,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["createEmptyGroups"])) {
                     $addProblem("warning", "gitlab->options->createEmptyGroups missing. (Assuming false.)");
                     $config["gitlab"]["options"]["createEmptyGroups"] = false;
-                } elseif (null === $config["gitlab"]["options"]["createEmptyGroups"]) {
+                } elseif ("" === $config["gitlab"]["options"]["createEmptyGroups"]) {
                     $addProblem("warning", "gitlab->options->createEmptyGroups not specified. (Assuming false.)");
                     $config["gitlab"]["options"]["createEmptyGroups"] = false;
                 } elseif (!is_bool($config["gitlab"]["options"]["createEmptyGroups"])) {
@@ -483,7 +558,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["deleteExtraGroups"])) {
                     $addProblem("warning", "gitlab->options->deleteExtraGroups missing. (Assuming false.)");
                     $config["gitlab"]["options"]["deleteExtraGroups"] = false;
-                } elseif (null === $config["gitlab"]["options"]["deleteExtraGroups"]) {
+                } elseif ("" === $config["gitlab"]["options"]["deleteExtraGroups"]) {
                     $addProblem("warning", "gitlab->options->deleteExtraGroups not specified. (Assuming false.)");
                     $config["gitlab"]["options"]["deleteExtraGroups"] = false;
                 } elseif (!is_bool($config["gitlab"]["options"]["deleteExtraGroups"])) {
@@ -493,7 +568,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["newMemberAccessLevel"])) {
                     $addProblem("warning", "gitlab->options->newMemberAccessLevel missing. (Assuming 30.)");
                     $config["gitlab"]["options"]["newMemberAccessLevel"] = 30;
-                } elseif (null === $config["gitlab"]["options"]["newMemberAccessLevel"]) {
+                } elseif ("" === $config["gitlab"]["options"]["newMemberAccessLevel"]) {
                     $addProblem("warning", "gitlab->options->newMemberAccessLevel not specified. (Assuming 30.)");
                     $config["gitlab"]["options"]["newMemberAccessLevel"] = 30;
                 } elseif (!is_int($config["gitlab"]["options"]["newMemberAccessLevel"])) {
@@ -503,7 +578,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
                     // $addProblem("warning", "gitlab->options->groupNamesOfAdministrators missing. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesOfAdministrators"] = [];
-                } elseif (null === $config["gitlab"]["options"]["groupNamesOfAdministrators"]) {
+                } elseif ("" === $config["gitlab"]["options"]["groupNamesOfAdministrators"]) {
                     $addProblem("warning", "gitlab->options->groupNamesOfAdministrators not specified. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesOfAdministrators"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
@@ -525,7 +600,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 if (!isset($config["gitlab"]["options"]["groupNamesOfExternal"])) {
                     $addProblem("warning", "gitlab->options->groupNamesOfExternal missing. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesOfExternal"] = [];
-                } elseif (null === $config["gitlab"]["options"]["groupNamesOfExternal"]) {
+                } elseif ("" === $config["gitlab"]["options"]["groupNamesOfExternal"]) {
                     // $addProblem("warning", "gitlab->options->groupNamesOfExternal not specified. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesOfExternal"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["groupNamesOfExternal"])) {
@@ -608,9 +683,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
         if ($config["ldap"]["debug"]) {
             $this->logger->debug("LDAP: Enabling debug mode");
-            if (false === @ldap_set_option(null, LDAP_OPT_DEBUG_LEVEL, 6)) {
-                throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
-            }
+            @ldap_set_option(null, LDAP_OPT_DEBUG_LEVEL, 6);
         }
 
         // Solves: ldap_search(): Search: Operations error.
@@ -618,14 +691,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // https://stackoverflow.com/questions/17742751/ldap-operations-error
         if ($config["ldap"]["winCompatibilityMode"]) {
             $this->logger->debug("LDAP: Enabling compatibility mode");
-            if (false === @ldap_set_option(null, LDAP_OPT_REFERRALS, 0)) {
-                throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
-            }
+            @ldap_set_option(null, LDAP_OPT_REFERRALS, 0);
         }
 
         $this->logger->debug("LDAP: Connecting", ["uri" => $ldapUri]);
         if (false === ($ldap = @ldap_connect($ldapUri))) {
-            throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            throw new \Exception(sprintf("LDAP connection will not be possible. Check that your server address and port \"%s\" are plausible.", $ldapUri));
         }
 
         $this->logger->debug("LDAP: Setting options");
@@ -660,13 +731,14 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
-        if (is_array($ldapUsers = @ldap_get_entries($ldap, $ldapUsersQuery))) {
+        $ldapUserAttribute      = strtolower($config["ldap"]["queries"]["userUniqueAttribute"]);
+        $ldapUserMatchAttribute = strtolower($config["ldap"]["queries"]["userMatchAttribute"]);
+        $ldapNameAttribute      = strtolower($config["ldap"]["queries"]["userNameAttribute"]);
+        $ldapEmailAttribute     = strtolower($config["ldap"]["queries"]["userEmailAttribute"]);
+
+        if (is_array($ldapUsers = @ldap_get_entries($ldap, $ldapUsersQuery)) && is_iterable($ldapUsers)) {
             if ($ldapUsersNum = count($ldapUsers)) {
                 $this->logger->notice(sprintf("%d directory user(s) found.", $ldapUsersNum));
-                $ldapUserAttribute      = strtolower($config["ldap"]["queries"]["userUniqueAttribute"]);
-                $ldapUserMatchAttribute = strtolower($config["ldap"]["queries"]["userMatchAttribute"]);
-                $ldapNameAttribute      = strtolower($config["ldap"]["queries"]["userNameAttribute"]);
-                $ldapEmailAttribute     = strtolower($config["ldap"]["queries"]["userEmailAttribute"]);
 
                 foreach ($ldapUsers as $i => $ldapUser) {
                     if (!is_int($i)) {
@@ -800,11 +872,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
-        if (is_array($ldapGroups = @ldap_get_entries($ldap, $ldapGroupsQuery))) {
+        $ldapGroupAttribute         = strtolower($config["ldap"]["queries"]["groupUniqueAttribute"]);
+        $ldapGroupMemberAttribute   = strtolower($config["ldap"]["queries"]["groupMemberAttribute"]);
+
+        if (is_array($ldapGroups = @ldap_get_entries($ldap, $ldapGroupsQuery)) && is_iterable($ldapGroups)) {
             if ($ldapGroupsNum = count($ldapGroups)) {
                 $this->logger->notice(sprintf("%d directory group(s) found.", $ldapGroupsNum));
-                $ldapGroupAttribute         = strtolower($config["ldap"]["queries"]["groupUniqueAttribute"]);
-                $ldapGroupMemberAttribute   = strtolower($config["ldap"]["queries"]["groupMemberAttribute"]);
 
                 foreach ($ldapGroups as $i => $ldapGroup) {
                     if (!is_int($i)) {
@@ -1159,7 +1232,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // Update users of which were already in both Gitlab and the directory
         $this->logger->notice("Updating users of which were already in both Gitlab and the directory...");
         foreach ($usersSync["found"] as $gitlabUserId => $gitlabUserName) {
-            if ((isset($usersSync["new"][$gitlabUserId]) && is_array($usersSync["new"][$gitlabUserId])) || (isset($usersSync["extra"][$gitlabUserId]) && is_array($usersSync["extra"][$gitlabUserId]))) {
+            if (!empty($usersSync["new"][$gitlabUserId]) || !empty($usersSync["extra"][$gitlabUserId])) {
                 continue;
             }
 
@@ -1349,6 +1422,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             if ($this->array_key_exists_i($gitlabGroupName, $ldapGroupsSafe)) {
                 continue;
             }
+            $ldapGroupMembers = $ldapGroupsSafe[$gitlabGroupName];
 
             $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
             if ((is_array($ldapGroupMembers) && 1 <= count($ldapGroupMembers)) || !$config["gitlab"]["options"]["deleteExtraGroups"]) {
@@ -1382,7 +1456,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // Update groups of which were already in both Gitlab and the directory
         $this->logger->notice("Updating groups of which were already in both Gitlab and the directory...");
         foreach ($groupsSync["found"] as $gitlabGroupId => $gitlabGroupName) {
-            if ((isset($groupsSync["new"][$gitlabGroupId]) && is_array($groupsSync["new"][$gitlabGroupId])) || (isset($groupsSync["extra"][$gitlabGroupId]) && is_array($groupsSync["extra"][$gitlabGroupId]))) {
+            if (!empty($groupsSync["new"][$gitlabGroupId]) || !empty($groupsSync["extra"][$gitlabGroupId])) {
                 continue;
             }
 
