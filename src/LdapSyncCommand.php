@@ -45,6 +45,11 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
     private $dryRun = false;
 
     /**
+     * @var bool Continue on failure: Do not abort on certain errors
+     */
+    private $continueOnFail = false;
+
+    /**
      * @var string Application root directory
      */
     private $rootDir = null;
@@ -77,6 +82,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             ->setName("ldap:sync")
             ->setDescription("Sync LDAP users and groups with a Gitlab CE/EE self-hosted installation.")
             ->addOption("dryrun", "d", InputOption::VALUE_NONE, "Dry run: Do not persist any changes.")
+            ->addOption("continueOnFail", null, InputOption::VALUE_NONE, "Do not abort on certain errors. (Continue running if possible.)")
             ->addArgument("instance", InputArgument::OPTIONAL, "Sync with a specific instance, or leave unspecified to work with all.")
         ;
     }
@@ -95,6 +101,10 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // Prepare
         if ($this->dryRun = boolval($input->getOption("dryrun"))) {
             $this->logger->warning("Dry run enabled: No changes will be persisted.");
+        }
+
+        if ($this->continueOnFail = boolval($input->getOption("continueOnFail"))) {
+            $this->logger->warning("Continue on failure enabled: Certain errors will be ignored if possible.");
         }
 
         $this->rootDir                  = sprintf("%s/../", __DIR__);
@@ -1177,14 +1187,19 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     "external"          => $ldapUserDetails["isExternal"],
                 ])) : $this->logger->warning("Operation skipped due to dry run.");
             } catch (\Exception $e) {
-                //Script continues to run for errors that are due to misconfiguration of individual users in the AD
-                if (strcmp($e->getMessage(),"Email has already been taken") == 0) {
-                    $this->logger->error(sprintf("Gitlab user \"%s\" [%s] was not created, Email is already used by another account!", $gitlabUserName, $ldapUserDetails["dn"]));
+                // Permit continue when user email address already used by another account
+                if ("Email has already been taken" === $e->getMessage()) {
+                    $this->logger->error(sprintf("Gitlab user \"%s\" [%s] was not created, email address already used by another account.", $gitlabUserName, $ldapUserDetails["dn"]));
+                }
+
+                if ($this->continueOnFail) {
                     $this->gitlabApiCoolDown();
                     continue;
                 }
-                throw e;
+
+                throw $e;
             }
+
             $gitlabUserId = (is_array($gitlabUser) && isset($gitlabUser["id"]) && is_int($gitlabUser["id"])) ? $gitlabUser["id"] : sprintf("dry:%s", $ldapUserDetails["dn"]);
             $usersSync["new"][$gitlabUserId] = $gitlabUserName;
 
