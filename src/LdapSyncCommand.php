@@ -45,6 +45,11 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
     private $dryRun = false;
 
     /**
+     * @var bool Continue on failure: Do not abort on certain errors
+     */
+    private $continueOnFail = false;
+
+    /**
      * @var string Application root directory
      */
     private $rootDir = null;
@@ -77,6 +82,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             ->setName("ldap:sync")
             ->setDescription("Sync LDAP users and groups with a Gitlab CE/EE self-hosted installation.")
             ->addOption("dryrun", "d", InputOption::VALUE_NONE, "Dry run: Do not persist any changes.")
+            ->addOption("continueOnFail", null, InputOption::VALUE_NONE, "Do not abort on certain errors. (Continue running if possible.)")
             ->addArgument("instance", InputArgument::OPTIONAL, "Sync with a specific instance, or leave unspecified to work with all.")
         ;
     }
@@ -95,6 +101,10 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // Prepare
         if ($this->dryRun = boolval($input->getOption("dryrun"))) {
             $this->logger->warning("Dry run enabled: No changes will be persisted.");
+        }
+
+        if ($this->continueOnFail = boolval($input->getOption("continueOnFail"))) {
+            $this->logger->warning("Continue on failure enabled: Certain errors will be ignored if possible.");
         }
 
         $this->rootDir                  = sprintf("%s/../", __DIR__);
@@ -219,21 +229,27 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Load configuration.
-     * @param  string     $file File
-     * @return array|null       Configuration, or null if failed
+     * @param  string            $file File
+     * @return array<mixed>|null       Configuration, or null if failed
      */
     private function loadConfig(string $file): ?array
     {
         if (!($file = trim($file))) {
             $this->logger->critical("Configuration file not specified.");
             return null;
-        } elseif (!file_exists($file)) {
+        }
+
+        if (!file_exists($file)) {
             $this->logger->critical("Configuration file not found.");
             return null;
-        } elseif (!is_file($file)) {
+        }
+
+        if (!is_file($file)) {
             $this->logger->critical("Configuration file not a file.");
             return null;
-        } elseif (!is_readable($file)) {
+        }
+
+        if (!is_readable($file)) {
             $this->logger->critical("Configuration file not readable.");
             return null;
         }
@@ -253,7 +269,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         if (!is_array($yaml)) {
             $this->logger->critical("Configuration format invalid.");
             return null;
-        } elseif (count($yaml) < 1) {
+        }
+
+        if (empty($yaml)) {
             $this->logger->critical("Configuration empty.");
             return null;
         }
@@ -263,9 +281,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Validate configuration.
-     * @param  array      &$config   Configuration (this will be modified for type strictness and trimming)
-     * @param  array|null &$problems Optional output of problems indexed by type
-     * @return bool                  True if valid, false if invalid
+     * @param  array<mixed>             $config   Configuration (this will be modified for type strictness and trimming)
+     * @param  array<string,array>|null $problems Optional output of problems indexed by type
+     * @return bool                               True if valid, false if invalid
      */
     private function validateConfig(array &$config, array &$problems = null): bool
     {
@@ -291,7 +309,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             }
 
             if (!isset($problems[$type]) || !is_array($problems[$type])) {
-                throw new \Exception("Type invalid.");
+                throw new \UnexpectedValueException("Type invalid.");
             }
 
             if (!($message = trim($message))) {
@@ -515,7 +533,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $config["gitlab"]["options"]["userNamesToIgnore"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["userNamesToIgnore"])) {
                     $addProblem("error", "gitlab->options->userNamesToIgnore is not an array.");
-                } elseif (1 <= count($config["gitlab"]["options"]["userNamesToIgnore"])) {
+                } elseif (!empty($config["gitlab"]["options"]["userNamesToIgnore"])) {
                     foreach ($config["gitlab"]["options"]["userNamesToIgnore"] as $i => $userName) {
                         if (!is_string($userName)) {
                             $addProblem("error", sprintf("gitlab->options->userNamesToIgnore[%d] is not a string.", $i));
@@ -537,7 +555,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $config["gitlab"]["options"]["groupNamesToIgnore"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["groupNamesToIgnore"])) {
                     $addProblem("error", "gitlab->options->groupNamesToIgnore is not an array.");
-                } elseif (1 <= count($config["gitlab"]["options"]["groupNamesToIgnore"])) {
+                } elseif (!empty($config["gitlab"]["options"]["groupNamesToIgnore"])) {
                     foreach ($config["gitlab"]["options"]["groupNamesToIgnore"] as $i => $groupName) {
                         if (!is_string($groupName)) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesToIgnore[%d] is not a string.", $i));
@@ -607,7 +625,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $config["gitlab"]["options"]["groupNamesOfAdministrators"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
                     $addProblem("error", "gitlab->options->groupNamesOfAdministrators is not an array.");
-                } elseif (1 <= count($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
+                } elseif (!empty($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
                     foreach ($config["gitlab"]["options"]["groupNamesOfAdministrators"] as $i => $groupName) {
                         if (!is_string($groupName)) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesOfAdministrators[%d] is not a string.", $i));
@@ -629,7 +647,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $config["gitlab"]["options"]["groupNamesOfExternal"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["groupNamesOfExternal"])) {
                     $addProblem("error", "gitlab->options->groupNamesOfExternal is not an array.");
-                } elseif (1 <= count($config["gitlab"]["options"]["groupNamesOfExternal"])) {
+                } elseif (!empty($config["gitlab"]["options"]["groupNamesOfExternal"])) {
                     foreach ($config["gitlab"]["options"]["groupNamesOfExternal"] as $i => $groupName) {
                         if (!is_string($groupName)) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesOfExternal[%d] is not a string.", $i));
@@ -667,17 +685,17 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         }
         // >> Gitlab
 
-        return (is_array($problems) && isset($problems["error"]) && is_array($problems["error"]) && 0 === count($problems["error"]));
+        return (is_array($problems) && isset($problems["error"]) && is_array($problems["error"]) && empty($problems["error"]));
     }
 
     /**
      * Get users and groups from LDAP.
-     * @param  array  $config     Validated configuration
-     * @param  array  &$users     Users output
-     * @param  int    &$usersNum  Users count output
-     * @param  array  &$groups    Groups output
-     * @param  int    &$groupsNum Groups count output
-     * @return void               Success if returned, exception thrown on error
+     * @param  array<mixed>        $config    Validated configuration
+     * @param  array<string,array> $users     Users output
+     * @param  int                 $usersNum  Users count output
+     * @param  array<string,array> $groups    Groups output
+     * @param  int                 $groupsNum Groups count output
+     * @return void                           Success if returned, exception thrown on error
      */
     private function getLdapUsersAndGroups(array $config, array &$users, int &$usersNum, array &$groups, int &$groupsNum): void
     {
@@ -720,39 +738,51 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
         $this->logger->debug("LDAP: Connecting", ["uri" => $ldapUri]);
         if (false === ($ldap = @ldap_connect($ldapUri))) {
-            throw new \Exception(sprintf("LDAP connection will not be possible. Check that your server address and port \"%s\" are plausible.", $ldapUri));
+            throw new \RuntimeException(sprintf("LDAP connection will not be possible. Check that your server address and port \"%s\" are plausible.", $ldapUri));
         }
 
         $this->logger->debug("LDAP: Setting options");
         if (false === @ldap_set_option($ldap, LDAP_OPT_PROTOCOL_VERSION, $config["ldap"]["server"]["version"])) {
-            throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
         if ("tls" === $config["ldap"]["server"]["encryption"]) {
             $this->logger->debug("LDAP: STARTTLS");
-            @ldap_start_tls($ldap);
+            if (false === @ldap_start_tls($ldap)) {
+                throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            }
         }
 
         $this->logger->debug("LDAP: Binding", ["dn" => $config["ldap"]["server"]["bindDn"]]);
         if (false === @ldap_bind($ldap, $config["ldap"]["server"]["bindDn"], $config["ldap"]["server"]["bindPassword"])) {
-            throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
         $this->logger->notice("LDAP connection established.");
 
         // << Retrieve users
-        if (false === ($ldapUsersQuery = @ldap_search($ldap, sprintf(
+        $ldapUsersQueryBase = sprintf(
             "%s%s%s",
             $config["ldap"]["queries"]["userDn"],
             strlen($config["ldap"]["queries"]["userDn"]) >= 1 ? "," : "",
             $config["ldap"]["queries"]["baseDn"]
-        ), $config["ldap"]["queries"]["userFilter"], [
+        );
+
+        $ldapUsersQueryAttributes = [
             $config["ldap"]["queries"]["userUniqueAttribute"],
             $config["ldap"]["queries"]["userMatchAttribute"],
             $config["ldap"]["queries"]["userNameAttribute"],
             $config["ldap"]["queries"]["userEmailAttribute"],
-        ]))) {
-            throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+        ];
+
+        $this->logger->debug("Retrieving users.", [
+            "base"          => $ldapUsersQueryBase,
+            "filter"        => $config["ldap"]["queries"]["userFilter"],
+            "attributes"    => $ldapUsersQueryAttributes,
+        ]);
+
+        if (false === ($ldapUsersQuery = @ldap_search($ldap, $ldapUsersQueryBase, $config["ldap"]["queries"]["userFilter"], $ldapUsersQueryAttributes))) {
+            throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
         $ldapUserAttribute      = strtolower($config["ldap"]["queries"]["userUniqueAttribute"]);
@@ -761,7 +791,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $ldapEmailAttribute     = strtolower($config["ldap"]["queries"]["userEmailAttribute"]);
 
         if (is_array($ldapUsers = @ldap_get_entries($ldap, $ldapUsersQuery)) && is_iterable($ldapUsers)) {
-            if ($ldapUsersNum = count($ldapUsers)) {
+            if (($ldapUsersNum = count($ldapUsers)) >= 1) {
                 $this->logger->notice(sprintf("%d directory user(s) found.", $ldapUsersNum));
                 $ldapSshKeyAttribute    = strtolower($config["ldap"]["queries"]["userSshKeyAttribute"]);
 
@@ -899,23 +929,33 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // >> Retrieve users
 
         // << Retrieve groups
-        if (false === ($ldapGroupsQuery = @ldap_search($ldap, sprintf(
+        $ldapGroupsQueryBase = sprintf(
             "%s%s%s",
             $config["ldap"]["queries"]["groupDn"],
             strlen($config["ldap"]["queries"]["groupDn"]) >= 1 ? "," : "",
             $config["ldap"]["queries"]["baseDn"]
-        ), $config["ldap"]["queries"]["groupFilter"], [
+        );
+
+        $ldapGroupsQueryAttributes = [
             $config["ldap"]["queries"]["groupUniqueAttribute"],
             $config["ldap"]["queries"]["groupMemberAttribute"],
-        ]))) {
-            throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+        ];
+
+        $this->logger->debug("Retrieving groups.", [
+            "base"          => $ldapGroupsQueryBase,
+            "filter"        => $config["ldap"]["queries"]["groupFilter"],
+            "attributes"    => $ldapGroupsQueryAttributes,
+        ]);
+
+        if (false === ($ldapGroupsQuery = @ldap_search($ldap, $ldapGroupsQueryBase, $config["ldap"]["queries"]["groupFilter"], $ldapGroupsQueryAttributes))) {
+            throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
         $ldapGroupAttribute         = strtolower($config["ldap"]["queries"]["groupUniqueAttribute"]);
         $ldapGroupMemberAttribute   = strtolower($config["ldap"]["queries"]["groupMemberAttribute"]);
 
         if (is_array($ldapGroups = @ldap_get_entries($ldap, $ldapGroupsQuery)) && is_iterable($ldapGroups)) {
-            if ($ldapGroupsNum = count($ldapGroups)) {
+            if (($ldapGroupsNum = count($ldapGroups)) >= 1) {
                 $this->logger->notice(sprintf("%d directory group(s) found.", $ldapGroupsNum));
 
                 foreach ($ldapGroups as $i => $ldapGroup) {
@@ -1064,7 +1104,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // Disconnect
         $this->logger->debug("LDAP: Unbinding");
         if (false === @ldap_unbind($ldap)) {
-            throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
         $ldap = null;
 
@@ -1073,14 +1113,14 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Deploy users and groups to a Gitlab instance.
-     * @param  array  $config         Validated configuration
-     * @param  string $gitlabInstance Gitlab instance name
-     * @param  array  $gitlabConfig   Gitlab instance configuration
-     * @param  array  $ldapUsers      LDAP users
-     * @param  int    $ldapUsersNum   LDAP users count
-     * @param  array  $ldapGroups     LDAP groups
-     * @param  int    $ldapGroupsNum  LDAP groups count
-     * @return void                   Success if returned, exception thrown on error
+     * @param  array<mixed>        $config         Validated configuration
+     * @param  string              $gitlabInstance Gitlab instance name
+     * @param  array<mixed>        $gitlabConfig   Gitlab instance configuration
+     * @param  array<string,array> $ldapUsers      LDAP users
+     * @param  int                 $ldapUsersNum   LDAP users count
+     * @param  array<string,array> $ldapGroups     LDAP groups
+     * @param  int                 $ldapGroupsNum  LDAP groups count
+     * @return void                                Success if returned, exception thrown on error
      */
     private function deployGitlabUsersAndGroups(array $config, string $gitlabInstance, array $gitlabConfig, array $ldapUsers, int $ldapUsersNum, array $ldapGroups, int $ldapGroupsNum): void
     {
@@ -1131,7 +1171,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $this->logger->notice("Finding all existing Gitlab users...");
         $p = 0;
 
-        while (is_array($gitlabUsers = $gitlab->api("users")->all(["page" => ++$p, "per_page" => 100])) && count($gitlabUsers) >= 1) {
+        while (is_array($gitlabUsers = $gitlab->api("users")->all(["page" => ++$p, "per_page" => 100])) && !empty($gitlabUsers)) {
             foreach ($gitlabUsers as $i => $gitlabUser) {
                 $n = $i + 1;
 
@@ -1202,18 +1242,32 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $gitlabUserPassword = $this->generateRandomPassword(12);
             $this->logger->debug(sprintf("Password for Gitlab user \"%s\" [%s] will be: %s", $gitlabUserName, $ldapUserDetails["dn"], $gitlabUserPassword));
 
-            !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->create($ldapUserDetails["email"], $gitlabUserPassword, [
-                "username"          => $gitlabUserName,
-                "reset_password"    => false,
-                "name"              => $ldapUserDetails["fullName"],
-                "extern_uid"        => $ldapUserDetails["dn"],
-                "provider"          => $gitlabConfig["ldapServerName"],
-                "public_email"      => $ldapUserDetails["email"],
-                "admin"             => $ldapUserDetails["isAdmin"],
-                "can_create_group"  => $ldapUserDetails["isAdmin"],
-                "skip_confirmation" => true,
-                "external"          => $ldapUserDetails["isExternal"],
-            ])) : $this->logger->warning("Operation skipped due to dry run.");
+            try {
+                !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->create($ldapUserDetails["email"], $gitlabUserPassword, [
+                    "username"          => $gitlabUserName,
+                    "reset_password"    => false,
+                    "name"              => $ldapUserDetails["fullName"],
+                    "extern_uid"        => $ldapUserDetails["dn"],
+                    "provider"          => $gitlabConfig["ldapServerName"],
+                    "public_email"      => $ldapUserDetails["email"],
+                    "admin"             => $ldapUserDetails["isAdmin"],
+                    "can_create_group"  => $ldapUserDetails["isAdmin"],
+                    "skip_confirmation" => true,
+                    "external"          => $ldapUserDetails["isExternal"],
+                ])) : $this->logger->warning("Operation skipped due to dry run.");
+            } catch (\Exception $e) {
+                // Permit continue when user email address already used by another account
+                if ("Email has already been taken" === $e->getMessage()) {
+                    $this->logger->error(sprintf("Gitlab user \"%s\" [%s] was not created, email address already used by another account.", $gitlabUserName, $ldapUserDetails["dn"]));
+                }
+
+                if ($this->continueOnFail) {
+                    $this->gitlabApiCoolDown();
+                    continue;
+                }
+
+                throw $e;
+            }
 
             $gitlabUserId = (is_array($gitlabUser) && isset($gitlabUser["id"]) && is_int($gitlabUser["id"])) ? $gitlabUser["id"] : sprintf("dry:%s", $ldapUserDetails["dn"]);
             $usersSync["new"][$gitlabUserId] = $gitlabUserName;
@@ -1331,7 +1385,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $this->logger->notice("Finding all existing Gitlab groups...");
         $p = 0;
 
-        while (is_array($gitlabGroups = $gitlab->api("groups")->all(["page" => ++$p, "per_page" => 100, "all_available" => true])) && count($gitlabGroups) >= 1) {
+        while (is_array($gitlabGroups = $gitlab->api("groups")->all(["page" => ++$p, "per_page" => 100, "all_available" => true])) && !empty($gitlabGroups)) {
             foreach ($gitlabGroups as $i => $gitlabGroup) {
                 $n = $i + 1;
 
@@ -1412,7 +1466,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
-            if ((!is_array($ldapGroupMembers) || 1 > count($ldapGroupMembers)) && !$config["gitlab"]["options"]["createEmptyGroups"]) {
+            if ((!is_array($ldapGroupMembers) || empty($ldapGroupMembers)) && !$config["gitlab"]["options"]["createEmptyGroups"]) {
                 $this->logger->warning(sprintf("Not creating Gitlab group \"%s\" [%s]: No members in directory group, or config gitlab->options->createEmptyGroups is disabled.", $gitlabGroupName, $gitlabGroupPath));
                 continue;
             }
@@ -1455,7 +1509,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $ldapGroupMembers = $ldapGroupsSafe[$gitlabGroupName];
 
             $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
-            if ((is_array($ldapGroupMembers) && 1 <= count($ldapGroupMembers)) || !$config["gitlab"]["options"]["deleteExtraGroups"]) {
+            if ((is_array($ldapGroupMembers) && !empty($ldapGroupMembers)) || !$config["gitlab"]["options"]["deleteExtraGroups"]) {
                 $this->logger->info(sprintf("Not deleting Gitlab group #%d \"%s\" [%s]: Has members in directory group, or config gitlab->options->deleteExtraGroups is disabled.", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                 continue;
             }
@@ -1607,7 +1661,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $this->logger->notice("Finding existing group members...");
             $p = 0;
 
-            while (is_array($gitlabUsers = $gitlab->api("groups")->members($gitlabGroupId, ["page" => ++$p, "per_page" => 100])) && count($gitlabUsers) >= 1) {
+            while (is_array($gitlabUsers = $gitlab->api("groups")->members($gitlabGroupId, ["page" => ++$p, "per_page" => 100])) && !empty($gitlabUsers)) {
                 foreach ($gitlabUsers as $i => $gitlabUser) {
                     $n = $i + 1;
 
@@ -1736,25 +1790,29 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Case-insensitive `in_array()`.
-     * @param  mixed $needle
-     * @param  array $haystack
+     * @param  bool|int|float|string $needle
+     * @param  array<mixed>          $haystack
      * @return bool
      */
     private function in_array_i($needle, array $haystack): bool
     {
-        return in_array(strtolower($needle), array_map("strtolower", $haystack));
+        if ("" === ($needle = strtolower(strval($needle)))) {
+            throw new \UnexpectedValueException("Needle not specified.");
+        }
+
+        return in_array($needle, array_map("strtolower", $haystack));
     }
 
     /**
      * Case insensitive `array_key_exists()`.
-     * @param  mixed $key
-     * @param  array $haystack
+     * @param  bool|int|float|string $key
+     * @param  array<mixed>          $haystack
      * @return bool
      */
     private function array_key_exists_i($key, array $haystack): bool
     {
-        if (!($key = strtolower($key))) {
-            throw new \Exception("Key not specified.");
+        if ("" === ($key = strtolower(strval($key)))) {
+            throw new \UnexpectedValueException("Key not specified.");
         }
 
         foreach (array_change_key_case($haystack, CASE_LOWER) as $k => $v) {
@@ -1774,7 +1832,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
     private function generateRandomPassword(int $length): string
     {
         if ($length < 1) {
-            throw new \Exception("Length must be at least 1.");
+            throw new \UnexpectedValueException("Length must be at least 1.");
         }
 
         $password   = "";
@@ -1789,7 +1847,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Get a list of built-in user names, of which should be ignored by this application.
-     * @return array
+     * @return array<string>
      */
     private function getBuiltInUserNames()
     {
