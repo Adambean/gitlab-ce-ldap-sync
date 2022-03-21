@@ -229,8 +229,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Load configuration.
-     * @param  string     $file File
-     * @return array|null       Configuration, or null if failed
+     * @param  string            $file File
+     * @return array<mixed>|null       Configuration, or null if failed
      */
     private function loadConfig(string $file): ?array
     {
@@ -281,9 +281,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Validate configuration.
-     * @param  array      $config   Configuration (this will be modified for type strictness and trimming)
-     * @param  array|null $problems Optional output of problems indexed by type
-     * @return bool                 True if valid, false if invalid
+     * @param  array<mixed>             $config   Configuration (this will be modified for type strictness and trimming)
+     * @param  array<string,array>|null $problems Optional output of problems indexed by type
+     * @return bool                               True if valid, false if invalid
      */
     private function validateConfig(array &$config, array &$problems = null): bool
     {
@@ -666,12 +666,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Get users and groups from LDAP.
-     * @param  array  $config    Validated configuration
-     * @param  array  $users     Users output
-     * @param  int    $usersNum  Users count output
-     * @param  array  $groups    Groups output
-     * @param  int    $groupsNum Groups count output
-     * @return void              Success if returned, exception thrown on error
+     * @param  array<mixed>        $config    Validated configuration
+     * @param  array<string,array> $users     Users output
+     * @param  int                 $usersNum  Users count output
+     * @param  array<string,array> $groups    Groups output
+     * @param  int                 $groupsNum Groups count output
+     * @return void                           Success if returned, exception thrown on error
      */
     private function getLdapUsersAndGroups(array $config, array &$users, int &$usersNum, array &$groups, int &$groupsNum): void
     {
@@ -1074,14 +1074,14 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Deploy users and groups to a Gitlab instance.
-     * @param  array  $config         Validated configuration
-     * @param  string $gitlabInstance Gitlab instance name
-     * @param  array  $gitlabConfig   Gitlab instance configuration
-     * @param  array  $ldapUsers      LDAP users
-     * @param  int    $ldapUsersNum   LDAP users count
-     * @param  array  $ldapGroups     LDAP groups
-     * @param  int    $ldapGroupsNum  LDAP groups count
-     * @return void                   Success if returned, exception thrown on error
+     * @param  array<mixed>        $config         Validated configuration
+     * @param  string              $gitlabInstance Gitlab instance name
+     * @param  array<mixed>        $gitlabConfig   Gitlab instance configuration
+     * @param  array<string,array> $ldapUsers      LDAP users
+     * @param  int                 $ldapUsersNum   LDAP users count
+     * @param  array<string,array> $ldapGroups     LDAP groups
+     * @param  int                 $ldapGroupsNum  LDAP groups count
+     * @return void                                Success if returned, exception thrown on error
      */
     private function deployGitlabUsersAndGroups(array $config, string $gitlabInstance, array $gitlabConfig, array $ldapUsers, int $ldapUsersNum, array $ldapGroups, int $ldapGroupsNum): void
     {
@@ -1736,24 +1736,28 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Case-insensitive `in_array()`.
-     * @param  mixed $needle
-     * @param  array $haystack
+     * @param  bool|int|float|string $needle
+     * @param  array<mixed>          $haystack
      * @return bool
      */
     private function in_array_i($needle, array $haystack): bool
     {
-        return in_array(strtolower($needle), array_map("strtolower", $haystack));
+        if ("" === ($needle = strval(strtolower($needle)))) {
+            throw new \UnexpectedValueException("Needle not specified.");
+        }
+
+        return in_array(strval(strtolower($needle)), array_map("strtolower", $haystack));
     }
 
     /**
      * Case insensitive `array_key_exists()`.
-     * @param  mixed $key
-     * @param  array $haystack
+     * @param  bool|int|float|string $key
+     * @param  array<mixed>          $haystack
      * @return bool
      */
     private function array_key_exists_i($key, array $haystack): bool
     {
-        if (!($key = strtolower($key))) {
+        if ("" === ($key = strval(strtolower($key)))) {
             throw new \UnexpectedValueException("Key not specified.");
         }
 
@@ -1789,7 +1793,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Get a list of built-in user names, of which should be ignored by this application.
-     * @return array
+     * @return array<string>
      */
     private function getBuiltInUserNames()
     {
