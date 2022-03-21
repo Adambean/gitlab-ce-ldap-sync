@@ -273,9 +273,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Validate configuration.
-     * @param  array      &$config   Configuration (this will be modified for type strictness and trimming)
-     * @param  array|null &$problems Optional output of problems indexed by type
-     * @return bool                  True if valid, false if invalid
+     * @param  array      $config   Configuration (this will be modified for type strictness and trimming)
+     * @param  array|null $problems Optional output of problems indexed by type
+     * @return bool                 True if valid, false if invalid
      */
     private function validateConfig(array &$config, array &$problems = null): bool
     {
@@ -658,12 +658,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Get users and groups from LDAP.
-     * @param  array  $config     Validated configuration
-     * @param  array  &$users     Users output
-     * @param  int    &$usersNum  Users count output
-     * @param  array  &$groups    Groups output
-     * @param  int    &$groupsNum Groups count output
-     * @return void               Success if returned, exception thrown on error
+     * @param  array  $config    Validated configuration
+     * @param  array  $users     Users output
+     * @param  int    $usersNum  Users count output
+     * @param  array  $groups    Groups output
+     * @param  int    $groupsNum Groups count output
+     * @return void              Success if returned, exception thrown on error
      */
     private function getLdapUsersAndGroups(array $config, array &$users, int &$usersNum, array &$groups, int &$groupsNum): void
     {
