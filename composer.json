@@ -3,13 +3,13 @@
     "type": "project",
     "license": "Apache-2.0",
     "require": {
-        "php": "^7.0.0",
+        "php": "^7.4.0",
         "cocur/slugify": "^3.1",
-        "m4tthumphrey/php-gitlab-api": "^9.11",
-        "monolog/monolog": "^1.23",
+        "m4tthumphrey/php-gitlab-api": "^9.19",
+        "monolog/monolog": "^1.27",
         "php-http/guzzle6-adapter": "^1.0",
-        "symfony/console": "^3.4",
-        "symfony/yaml": "^3.4"
+        "symfony/console": "^5.4",
+        "symfony/yaml": "^5.4"
     },
     "autoload": {
         "psr-4": {
@@ -21,6 +21,6 @@
         "sort-packages": true
     },
     "require-dev": {
-        "phpstan/phpstan": "^0.12.59"
+        "phpstan/phpstan": "^0.12.99"
     }
 }
