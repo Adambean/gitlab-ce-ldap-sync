@@ -237,13 +237,19 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         if (!($file = trim($file))) {
             $this->logger->critical("Configuration file not specified.");
             return null;
-        } elseif (!file_exists($file)) {
+        }
+
+        if (!file_exists($file)) {
             $this->logger->critical("Configuration file not found.");
             return null;
-        } elseif (!is_file($file)) {
+        }
+
+        if (!is_file($file)) {
             $this->logger->critical("Configuration file not a file.");
             return null;
-        } elseif (!is_readable($file)) {
+        }
+
+        if (!is_readable($file)) {
             $this->logger->critical("Configuration file not readable.");
             return null;
         }
@@ -263,7 +269,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         if (!is_array($yaml)) {
             $this->logger->critical("Configuration format invalid.");
             return null;
-        } elseif (count($yaml) < 1) {
+        }
+
+        if (empty($yaml)) {
             $this->logger->critical("Configuration empty.");
             return null;
         }
@@ -519,7 +527,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $config["gitlab"]["options"]["userNamesToIgnore"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["userNamesToIgnore"])) {
                     $addProblem("error", "gitlab->options->userNamesToIgnore is not an array.");
-                } elseif (1 <= count($config["gitlab"]["options"]["userNamesToIgnore"])) {
+                } elseif (!empty($config["gitlab"]["options"]["userNamesToIgnore"])) {
                     foreach ($config["gitlab"]["options"]["userNamesToIgnore"] as $i => $userName) {
                         if (!is_string($userName)) {
                             $addProblem("error", sprintf("gitlab->options->userNamesToIgnore[%d] is not a string.", $i));
@@ -541,7 +549,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $config["gitlab"]["options"]["groupNamesToIgnore"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["groupNamesToIgnore"])) {
                     $addProblem("error", "gitlab->options->groupNamesToIgnore is not an array.");
-                } elseif (1 <= count($config["gitlab"]["options"]["groupNamesToIgnore"])) {
+                } elseif (!empty($config["gitlab"]["options"]["groupNamesToIgnore"])) {
                     foreach ($config["gitlab"]["options"]["groupNamesToIgnore"] as $i => $groupName) {
                         if (!is_string($groupName)) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesToIgnore[%d] is not a string.", $i));
@@ -593,7 +601,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $config["gitlab"]["options"]["groupNamesOfAdministrators"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
                     $addProblem("error", "gitlab->options->groupNamesOfAdministrators is not an array.");
-                } elseif (1 <= count($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
+                } elseif (!empty($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
                     foreach ($config["gitlab"]["options"]["groupNamesOfAdministrators"] as $i => $groupName) {
                         if (!is_string($groupName)) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesOfAdministrators[%d] is not a string.", $i));
@@ -615,7 +623,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     $config["gitlab"]["options"]["groupNamesOfExternal"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["groupNamesOfExternal"])) {
                     $addProblem("error", "gitlab->options->groupNamesOfExternal is not an array.");
-                } elseif (1 <= count($config["gitlab"]["options"]["groupNamesOfExternal"])) {
+                } elseif (!empty($config["gitlab"]["options"]["groupNamesOfExternal"])) {
                     foreach ($config["gitlab"]["options"]["groupNamesOfExternal"] as $i => $groupName) {
                         if (!is_string($groupName)) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesOfExternal[%d] is not a string.", $i));
@@ -653,7 +661,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         }
         // >> Gitlab
 
-        return (is_array($problems) && isset($problems["error"]) && is_array($problems["error"]) && 0 === count($problems["error"]));
+        return (is_array($problems) && isset($problems["error"]) && is_array($problems["error"]) && empty($problems["error"]));
     }
 
     /**
@@ -759,7 +767,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $ldapEmailAttribute     = strtolower($config["ldap"]["queries"]["userEmailAttribute"]);
 
         if (is_array($ldapUsers = @ldap_get_entries($ldap, $ldapUsersQuery)) && is_iterable($ldapUsers)) {
-            if ($ldapUsersNum = count($ldapUsers)) {
+            if (($ldapUsersNum = count($ldapUsers)) >= 1) {
                 $this->logger->notice(sprintf("%d directory user(s) found.", $ldapUsersNum));
 
                 foreach ($ldapUsers as $i => $ldapUser) {
@@ -908,7 +916,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $ldapGroupMemberAttribute   = strtolower($config["ldap"]["queries"]["groupMemberAttribute"]);
 
         if (is_array($ldapGroups = @ldap_get_entries($ldap, $ldapGroupsQuery)) && is_iterable($ldapGroups)) {
-            if ($ldapGroupsNum = count($ldapGroups)) {
+            if (($ldapGroupsNum = count($ldapGroups)) >= 1) {
                 $this->logger->notice(sprintf("%d directory group(s) found.", $ldapGroupsNum));
 
                 foreach ($ldapGroups as $i => $ldapGroup) {
@@ -1124,7 +1132,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $this->logger->notice("Finding all existing Gitlab users...");
         $p = 0;
 
-        while (is_array($gitlabUsers = $gitlab->api("users")->all(["page" => ++$p, "per_page" => 100])) && count($gitlabUsers) >= 1) {
+        while (is_array($gitlabUsers = $gitlab->api("users")->all(["page" => ++$p, "per_page" => 100])) && !empty($gitlabUsers)) {
             foreach ($gitlabUsers as $i => $gitlabUser) {
                 $n = $i + 1;
 
@@ -1338,7 +1346,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $this->logger->notice("Finding all existing Gitlab groups...");
         $p = 0;
 
-        while (is_array($gitlabGroups = $gitlab->api("groups")->all(["page" => ++$p, "per_page" => 100, "all_available" => true])) && count($gitlabGroups) >= 1) {
+        while (is_array($gitlabGroups = $gitlab->api("groups")->all(["page" => ++$p, "per_page" => 100, "all_available" => true])) && !empty($gitlabGroups)) {
             foreach ($gitlabGroups as $i => $gitlabGroup) {
                 $n = $i + 1;
 
@@ -1419,7 +1427,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
-            if ((!is_array($ldapGroupMembers) || 1 > count($ldapGroupMembers)) && !$config["gitlab"]["options"]["createEmptyGroups"]) {
+            if ((!is_array($ldapGroupMembers) || empty($ldapGroupMembers)) && !$config["gitlab"]["options"]["createEmptyGroups"]) {
                 $this->logger->warning(sprintf("Not creating Gitlab group \"%s\" [%s]: No members in directory group, or config gitlab->options->createEmptyGroups is disabled.", $gitlabGroupName, $gitlabGroupPath));
                 continue;
             }
@@ -1462,7 +1470,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $ldapGroupMembers = $ldapGroupsSafe[$gitlabGroupName];
 
             $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
-            if ((is_array($ldapGroupMembers) && 1 <= count($ldapGroupMembers)) || !$config["gitlab"]["options"]["deleteExtraGroups"]) {
+            if ((is_array($ldapGroupMembers) && !empty($ldapGroupMembers)) || !$config["gitlab"]["options"]["deleteExtraGroups"]) {
                 $this->logger->info(sprintf("Not deleting Gitlab group #%d \"%s\" [%s]: Has members in directory group, or config gitlab->options->deleteExtraGroups is disabled.", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                 continue;
             }
@@ -1599,7 +1607,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $this->logger->notice("Finding existing group members...");
             $p = 0;
 
-            while (is_array($gitlabUsers = $gitlab->api("groups")->members($gitlabGroupId, ["page" => ++$p, "per_page" => 100])) && count($gitlabUsers) >= 1) {
+            while (is_array($gitlabUsers = $gitlab->api("groups")->members($gitlabGroupId, ["page" => ++$p, "per_page" => 100])) && !empty($gitlabUsers)) {
                 foreach ($gitlabUsers as $i => $gitlabUser) {
                     $n = $i + 1;
 
