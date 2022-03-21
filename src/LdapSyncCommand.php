@@ -716,7 +716,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
         if ("tls" === $config["ldap"]["server"]["encryption"]) {
             $this->logger->debug("LDAP: STARTTLS");
-            @ldap_start_tls($ldap);
+            if (false === @ldap_start_tls($ldap)) {
+                throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            }
         }
 
         $this->logger->debug("LDAP: Binding", ["dn" => $config["ldap"]["server"]["bindDn"]]);
