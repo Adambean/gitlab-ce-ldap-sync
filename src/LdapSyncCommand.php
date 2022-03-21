@@ -301,7 +301,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             }
 
             if (!isset($problems[$type]) || !is_array($problems[$type])) {
-                throw new \Exception("Type invalid.");
+                throw new \UnexpectedValueException("Type invalid.");
             }
 
             if (!($message = trim($message))) {
@@ -706,12 +706,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
         $this->logger->debug("LDAP: Connecting", ["uri" => $ldapUri]);
         if (false === ($ldap = @ldap_connect($ldapUri))) {
-            throw new \Exception(sprintf("LDAP connection will not be possible. Check that your server address and port \"%s\" are plausible.", $ldapUri));
+            throw new \RuntimeException(sprintf("LDAP connection will not be possible. Check that your server address and port \"%s\" are plausible.", $ldapUri));
         }
 
         $this->logger->debug("LDAP: Setting options");
         if (false === @ldap_set_option($ldap, LDAP_OPT_PROTOCOL_VERSION, $config["ldap"]["server"]["version"])) {
-            throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
         if ("tls" === $config["ldap"]["server"]["encryption"]) {
@@ -721,7 +721,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
         $this->logger->debug("LDAP: Binding", ["dn" => $config["ldap"]["server"]["bindDn"]]);
         if (false === @ldap_bind($ldap, $config["ldap"]["server"]["bindDn"], $config["ldap"]["server"]["bindPassword"])) {
-            throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
         $this->logger->notice("LDAP connection established.");
@@ -738,7 +738,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $config["ldap"]["queries"]["userNameAttribute"],
             $config["ldap"]["queries"]["userEmailAttribute"],
         ]))) {
-            throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
         $ldapUserAttribute      = strtolower($config["ldap"]["queries"]["userUniqueAttribute"]);
@@ -879,7 +879,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $config["ldap"]["queries"]["groupUniqueAttribute"],
             $config["ldap"]["queries"]["groupMemberAttribute"],
         ]))) {
-            throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
         $ldapGroupAttribute         = strtolower($config["ldap"]["queries"]["groupUniqueAttribute"]);
@@ -1035,7 +1035,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // Disconnect
         $this->logger->debug("LDAP: Unbinding");
         if (false === @ldap_unbind($ldap)) {
-            throw new \Exception(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
+            throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
         $ldap = null;
 
@@ -1724,7 +1724,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
     private function array_key_exists_i($key, array $haystack): bool
     {
         if (!($key = strtolower($key))) {
-            throw new \Exception("Key not specified.");
+            throw new \UnexpectedValueException("Key not specified.");
         }
 
         foreach (array_change_key_case($haystack, CASE_LOWER) as $k => $v) {
@@ -1744,7 +1744,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
     private function generateRandomPassword(int $length): string
     {
         if ($length < 1) {
-            throw new \Exception("Length must be at least 1.");
+            throw new \UnexpectedValueException("Length must be at least 1.");
         }
 
         $password   = "";
