@@ -727,17 +727,27 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $this->logger->notice("LDAP connection established.");
 
         // << Retrieve users
-        if (false === ($ldapUsersQuery = @ldap_search($ldap, sprintf(
+        $ldapUsersQueryBase = sprintf(
             "%s%s%s",
             $config["ldap"]["queries"]["userDn"],
             strlen($config["ldap"]["queries"]["userDn"]) >= 1 ? "," : "",
             $config["ldap"]["queries"]["baseDn"]
-        ), $config["ldap"]["queries"]["userFilter"], [
+        );
+
+        $ldapUsersQueryAttributes = [
             $config["ldap"]["queries"]["userUniqueAttribute"],
             $config["ldap"]["queries"]["userMatchAttribute"],
             $config["ldap"]["queries"]["userNameAttribute"],
             $config["ldap"]["queries"]["userEmailAttribute"],
-        ]))) {
+        ];
+
+        $this->logger->debug("Retrieving users.", [
+            "base"          => $ldapUsersQueryBase,
+            "filter"        => $config["ldap"]["queries"]["userFilter"],
+            "attributes"    => $ldapUsersQueryAttributes,
+        ]);
+
+        if (false === ($ldapUsersQuery = @ldap_search($ldap, $ldapUsersQueryBase, $config["ldap"]["queries"]["userFilter"], $ldapUsersQueryAttributes))) {
             throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
@@ -870,15 +880,25 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // >> Retrieve users
 
         // << Retrieve groups
-        if (false === ($ldapGroupsQuery = @ldap_search($ldap, sprintf(
+        $ldapGroupsQueryBase = sprintf(
             "%s%s%s",
             $config["ldap"]["queries"]["groupDn"],
             strlen($config["ldap"]["queries"]["groupDn"]) >= 1 ? "," : "",
             $config["ldap"]["queries"]["baseDn"]
-        ), $config["ldap"]["queries"]["groupFilter"], [
+        );
+
+        $ldapGroupsQueryAttributes = [
             $config["ldap"]["queries"]["groupUniqueAttribute"],
             $config["ldap"]["queries"]["groupMemberAttribute"],
-        ]))) {
+        ];
+
+        $this->logger->debug("Retrieving groups.", [
+            "base"          => $ldapGroupsQueryBase,
+            "filter"        => $config["ldap"]["queries"]["groupFilter"],
+            "attributes"    => $ldapGroupsQueryAttributes,
+        ]);
+
+        if (false === ($ldapGroupsQuery = @ldap_search($ldap, $ldapGroupsQueryBase, $config["ldap"]["queries"]["groupFilter"], $ldapGroupsQueryAttributes))) {
             throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
