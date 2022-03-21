@@ -1742,11 +1742,11 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      */
     private function in_array_i($needle, array $haystack): bool
     {
-        if ("" === ($needle = strval(strtolower($needle)))) {
+        if ("" === ($needle = strtolower(strval($needle)))) {
             throw new \UnexpectedValueException("Needle not specified.");
         }
 
-        return in_array(strval(strtolower($needle)), array_map("strtolower", $haystack));
+        return in_array($needle, array_map("strtolower", $haystack));
     }
 
     /**
@@ -1757,7 +1757,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      */
     private function array_key_exists_i($key, array $haystack): bool
     {
-        if ("" === ($key = strval(strtolower($key)))) {
+        if ("" === ($key = strtolower(strval($key)))) {
             throw new \UnexpectedValueException("Key not specified.");
         }
 
