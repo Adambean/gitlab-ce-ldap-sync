@@ -374,7 +374,9 @@ gitlab_rails['ldap_servers'] = {
 
 Once you've configured this tool you can run it from a CLI using:
 
-$ php bin/console ldap:sync -d
+```console
+php bin/console ldap:sync -d
+```
 
 Depending on your system's PHP installation you may need to use `php-cli` instead of `php`. (This typically only occurs on WHM/cPanel based servers configured to host PHP via the fast process manager, PHP-FPM.)
 
@@ -382,14 +384,18 @@ Depending on your system's PHP installation you may need to use `php-cli` instea
 
 If you'd like to see more verbose output you can add up to 3 `-v` switches, for example:
 
-$ php bin/console ldap:sync -v
-$ php bin/console ldap:sync -vv
-$ php bin/console ldap:sync -vvv
+```console
+php bin/console ldap:sync -v
+php bin/console ldap:sync -vv
+php bin/console ldap:sync -vvv
+```
 
 If you'd like to only sync with a single Gitlab instance you can specify the name of it as per your configuration as an argument, for example:
 
-$ php bin/console ldap:sync athena
-$ php bin/console ldap:sync demeter
+```console
+php bin/console ldap:sync athena
+php bin/console ldap:sync demeter
+```
 
 ## Built With
 
