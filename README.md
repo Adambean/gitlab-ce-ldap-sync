@@ -415,7 +415,7 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 
 * **Adam Reece** - *Initial work* - [Adambean](https://github.com/Adambean)
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/Adambean/gitlab-ce-ldap-sync/contributors) who participated in this project.
 
 ## License
 
