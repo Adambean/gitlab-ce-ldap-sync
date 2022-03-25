@@ -1314,7 +1314,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 "name"              => $ldapUserDetails["fullName"],
                 "extern_uid"        => $ldapUserDetails["dn"],
                 "provider"          => $gitlabConfig["ldapServerName"],
-                "public_email"      => $ldapUserDetails["email"],
+                "email"             => $ldapUserDetails["email"],
                 "admin"             => $ldapUserDetails["isAdmin"],
                 "can_create_group"  => $ldapUserDetails["isAdmin"],
                 "skip_confirmation" => true,
