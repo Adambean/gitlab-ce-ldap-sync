@@ -22,11 +22,19 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+#      - name: Login to GitHub Container Registry
+#        uses: docker/login-action@v2
+#        with:
+#          registry: ghcr.io
+#          username: ${{ github.repository_owner }}
+#          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
           push: true
           tags: |
             macley/gitlab-ce-ldap-sync:latest
-          #platforms: linux/arm/v7,linux/amd64,linux/arm64 #linux/386
-          platforms: linux/amd64
+          #  adambean/gitlab-ce-ldap-sync:latest
+          #  ghcr.io/adambean/itlab-ce-ldap-sync:latest
+          platforms: linux/arm/v7,linux/amd64,linux/arm64,linux/386
