@@ -18,4 +18,4 @@ COPY . .
 
 RUN composer install
 
-CMD ["php", "bin/console", "ldap:sync"]
+CMD ["update-ca-certificates", "&&", "php", "bin/console", "ldap:sync"]
