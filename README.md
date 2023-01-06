@@ -400,10 +400,13 @@ php bin/console ldap:sync demeter
 ## Built With
 
 * [PHP](https://www.php.net): Entirely PHP.
+* [Symfony](https://symfony.com/): Symfony for the console, polyfill, and YAML components.
 
 ## Contributing
 
 Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
+
+PHP source code must comply with [PHP-FIG PSRs](https://www.php-fig.org/psr/) 1, 4, and 12 as much as reasonably possible.
 
 ### Potential features
 
