@@ -188,7 +188,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         // Deploy to Gitlab instances
         $this->logger->notice("Deploying users and groups to Gitlab instances.");
 
-        $gitlabInstanceOnly = trim($input->getArgument("instance"));
+        $gitlabInstanceOnly = trim(strval($input->getArgument("instance")));
         foreach ($config["gitlab"]["instances"] as $gitlabInstance => $gitlabConfig) {
             if ($gitlabInstanceOnly && $gitlabInstance !== $gitlabInstanceOnly) {
                 $this->logger->debug(sprintf("Skipping instance \"%s\", doesn't match the argument specified.", $gitlabInstance));
@@ -253,9 +253,6 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         } catch (ParseException $e) {
             $this->logger->critical(sprintf("Configuration file could not be parsed: %s", $e->getMessage()));
             return null;
-        } catch (\Exception $e) {
-            $this->logger->critical(sprintf("Configuration file could not be loaded: %s", $e->getMessage()));
-            return null;
         }
 
         if (!is_array($yaml)) {
@@ -273,9 +270,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Validate configuration.
-     * @param  array<mixed>             $config   Configuration (this will be modified for type strictness and trimming)
-     * @param  array<string,array>|null $problems Optional output of problems indexed by type
-     * @return bool                               True if valid, false if invalid
+     * @param  array<mixed>                $config   Configuration (this will be modified for type strictness and trimming)
+     * @param  array<string,string[]>|null $problems Optional output of problems indexed by type
+     * @return bool                                  True if valid, false if invalid
      */
     private function validateConfig(array &$config, array &$problems = null): bool
     {
@@ -289,12 +286,13 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         ];
 
         /**
-         * Add a problem.
-         * @param  string $type    Problem type (error or warning)
-         * @param  string $message Problem description
+         * @var callable $addProblem Add a problem.
+         * @param  string                      $type     Problem type (error or warning)
+         * @param  string                      $message  Problem description
+         * @uses   array<string,string[]>|null $problems Optional output of problems indexed by type
          * @return void
          */
-        $addProblem = function(string $type, string $message) use (&$problems): void {
+        $addProblem = function (string $type, string $message) use (&$problems): void {
 
             if (!($type = trim($type))) {
                 return;
@@ -658,12 +656,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Get users and groups from LDAP.
-     * @param  array<mixed>        $config    Validated configuration
-     * @param  array<string,array> $users     Users output
-     * @param  int                 $usersNum  Users count output
-     * @param  array<string,array> $groups    Groups output
-     * @param  int                 $groupsNum Groups count output
-     * @return void                           Success if returned, exception thrown on error
+     * @param  array<mixed>                       $config    Validated configuration
+     * @param  array<string,array<string, mixed>> $users     Users output
+     * @param  int                                $usersNum  Users count output
+     * @param  array<string,array<string, mixed>> $groups    Groups output
+     * @param  int                                $groupsNum Groups count output
+     * @return void                                          Success if returned, exception thrown on error
      */
     private function getLdapUsersAndGroups(array $config, array &$users, int &$usersNum, array &$groups, int &$groupsNum): void
     {
@@ -1066,14 +1064,14 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
     /**
      * Deploy users and groups to a Gitlab instance.
-     * @param  array<mixed>        $config         Validated configuration
-     * @param  string              $gitlabInstance Gitlab instance name
-     * @param  array<mixed>        $gitlabConfig   Gitlab instance configuration
-     * @param  array<string,array> $ldapUsers      LDAP users
-     * @param  int                 $ldapUsersNum   LDAP users count
-     * @param  array<string,array> $ldapGroups     LDAP groups
-     * @param  int                 $ldapGroupsNum  LDAP groups count
-     * @return void                                Success if returned, exception thrown on error
+     * @param  array<mixed>                       $config         Validated configuration
+     * @param  string                             $gitlabInstance Gitlab instance name
+     * @param  array<mixed>                       $gitlabConfig   Gitlab instance configuration
+     * @param  array<string,array<string, mixed>> $ldapUsers      LDAP users
+     * @param  int                                $ldapUsersNum   LDAP users count
+     * @param  array<string,array<string, mixed>> $ldapGroups     LDAP groups
+     * @param  int                                $ldapGroupsNum  LDAP groups count
+     * @return void                                               Success if returned, exception thrown on error
      */
     private function deployGitlabUsersAndGroups(array $config, string $gitlabInstance, array $gitlabConfig, array $ldapUsers, int $ldapUsersNum, array $ldapGroups, int $ldapGroupsNum): void
     {
