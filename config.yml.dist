@@ -15,16 +15,16 @@ ldap:
         bindPassword:                   ~
 
     queries:
-        baseDn:                         ~
+        baseDn:                         ''
 
-        userDn:                         ~
+        userDn:                         ''
         userFilter:                     "(objectClass=inetOrgPerson)"
         userUniqueAttribute:            "uid"
         userMatchAttribute:             "uid"
         userNameAttribute:              "cn"
         userEmailAttribute:             "mail"
 
-        groupDn:                        ~
+        groupDn:                        ''
         groupFilter:                    "(objectClass=groupOfUniqueNames)"
         groupUniqueAttribute:           "cn"
         groupMemberAttribute:           "memberUid"
