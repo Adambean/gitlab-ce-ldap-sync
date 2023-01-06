@@ -21,9 +21,13 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      * -------------------------------------------------------------------------
      */
 
-    const CONFIG_FILE_NAME      = "config.yml";
+    /** @const string User's configuration file name. */
+    const CONFIG_FILE_NAME = "config.yml";
+
+    /** @const string Distributed configuration file name. */
     const CONFIG_FILE_DIST_NAME = "config.yml.dist";
 
+    /** @const int Wait this long (in microseconds) between Gitlab API calls to avoid flooding. */
     const API_COOL_DOWN_USECONDS = 100000;
 
 
@@ -34,34 +38,22 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      * -------------------------------------------------------------------------
      */
 
-    /**
-     * @var ConsoleLogger Console logger interface
-     */
+    /** @var ConsoleLogger Console logger interface */
     private $logger = null;
 
-    /**
-     * @var bool Debug mode
-     */
+    /** @var bool Debug mode */
     private $dryRun = false;
 
-    /**
-     * @var bool Continue on failure: Do not abort on certain errors
-     */
+    /** @var bool Continue on failure: Do not abort on certain errors */
     private $continueOnFail = false;
 
-    /**
-     * @var string Application root directory
-     */
+    /** @var string Application root directory */
     private $rootDir = null;
 
-    /**
-     * @var string User's configuration file pathname.
-     */
+    /** @var string User's configuration file pathname. */
     private $configFilePathname = null;
 
-    /**
-     * @var string Distribution configuration file pathname.
-     */
+    /** @var string Distribution configuration file pathname. */
     private $configFileDistPathname = null;
 
 
@@ -1249,7 +1241,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     "name"              => $ldapUserDetails["fullName"],
                     "extern_uid"        => $ldapUserDetails["dn"],
                     "provider"          => $gitlabConfig["ldapServerName"],
-                    "public_email"      => $ldapUserDetails["email"],
+                    "email"             => $ldapUserDetails["email"],
                     "admin"             => $ldapUserDetails["isAdmin"],
                     "can_create_group"  => $ldapUserDetails["isAdmin"],
                     "skip_confirmation" => true,
@@ -1353,7 +1345,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 "name"              => $ldapUserDetails["fullName"],
                 "extern_uid"        => $ldapUserDetails["dn"],
                 "provider"          => $gitlabConfig["ldapServerName"],
-                "public_email"      => $ldapUserDetails["email"],
+                "email"             => $ldapUserDetails["email"],
                 "admin"             => $ldapUserDetails["isAdmin"],
                 "can_create_group"  => $ldapUserDetails["isAdmin"],
                 "skip_confirmation" => true,

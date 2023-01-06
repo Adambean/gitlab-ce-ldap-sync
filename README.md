@@ -69,7 +69,7 @@ Default: *false*
 
 #### winCompatibilityMode *(bool|null)*
 
-In some Active Directory instances when "user_dn" is empty (for example when the whole AD is searched for users), LDAP queries fail with the message "ldap_search(): Search: Operations error.". This is further described in https://stackoverflow.com/questions/17742751/ldap-operations-error. The fix described there is applied when **winCompatibilityMode** is set to *true*. Since this has only been tested on one instance, it is recommended to leave this option at *false* and only activate it if you experience the error described above.
+In some Active Directory instances when "user_dn" is empty (for example when the whole AD is searched for users), LDAP queries fail with the message "ldap_search(): Search: Operations error.". This is further described in <https://stackoverflow.com/questions/17742751/ldap-operations-error>. The fix described there is applied when **winCompatibilityMode** is set to *true*. Since this has only been tested on one instance, it is recommended to leave this option at *false* and only activate it if you experience the error described above.
 
 Default: *false*
 
@@ -235,7 +235,7 @@ This varies not only according to which directory software you're using, but als
 
 This must be defined as an array even if you have only 1 user. Be sure to quote user names that have spaces. For example:
 
-```
+```yaml
 userNamesToIgnore:
     - "nobody"
     - "Administrator"
@@ -258,7 +258,7 @@ This varies not only according to which directory software you're using, but als
 
 This must be defined as an array even if you have only 1 group. Be sure to quote group names that have spaces. For example:
 
-```
+```yaml
 groupNamesToIgnore:
     - "Managed Service Accounts"
     - "Marketing Staff"
@@ -311,7 +311,7 @@ This varies not only according to which directory software you're using, but als
 
 This must be defined as an array even if you have only 1 group. Be sure to quote group names that have spaces. For example:
 
-```
+```yaml
 groupNamesOfAdministrators:
     - "Domain Admins"
     - "Enterprise Admins"
@@ -330,7 +330,7 @@ This varies not only according to which directory software you're using, but als
 
 This must be defined as an array even if you have only 1 group. Be sure to quote group names that have spaces. For example:
 
-```
+```yaml
 groupNamesOfExternal:
     - "Domain Guests"
     - "Clients"
@@ -360,7 +360,7 @@ Specify the LDAP server name used by this Gitlab instance. You can find this in 
 
 **You may need to put "ldap" before this value!** This hasn't been tested across different installation types, but using the Omnibus package it appears if your "gitlab.rb" has the following...
 
-```
+```ruby
 gitlab_rails['ldap_servers'] = {
     'main' => {
         ...
@@ -374,7 +374,9 @@ gitlab_rails['ldap_servers'] = {
 
 Once you've configured this tool you can run it from a CLI using:
 
-    `php bin/console ldap:sync -d`
+```console
+php bin/console ldap:sync -d
+```
 
 Depending on your system's PHP installation you may need to use `php-cli` instead of `php`. (This typically only occurs on WHM/cPanel based servers configured to host PHP via the fast process manager, PHP-FPM.)
 
@@ -382,22 +384,29 @@ Depending on your system's PHP installation you may need to use `php-cli` instea
 
 If you'd like to see more verbose output you can add up to 3 `-v` switches, for example:
 
-    `php bin/console ldap:sync -v`
-    `php bin/console ldap:sync -vv`
-    `php bin/console ldap:sync -vvv`
+```console
+php bin/console ldap:sync -v
+php bin/console ldap:sync -vv
+php bin/console ldap:sync -vvv
+```
 
 If you'd like to only sync with a single Gitlab instance you can specify the name of it as per your configuration as an argument, for example:
 
-    `php bin/console ldap:sync athena`
-    `php bin/console ldap:sync demeter`
+```console
+php bin/console ldap:sync athena
+php bin/console ldap:sync demeter
+```
 
 ## Built With
 
 * [PHP](https://www.php.net): Entirely PHP.
+* [Symfony](https://symfony.com/): Symfony for the console, polyfill, and YAML components.
 
 ## Contributing
 
 Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
+
+PHP source code must comply with [PHP-FIG PSRs](https://www.php-fig.org/psr/) 1, 4, and 12 as much as reasonably possible.
 
 ### Potential features
 
@@ -409,13 +418,13 @@ Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c6
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags).
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/Adambean/gitlab-ce-ldap-sync/tags).
 
 ## Authors
 
 * **Adam Reece** - *Initial work* - [Adambean](https://github.com/Adambean)
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/Adambean/gitlab-ce-ldap-sync/contributors) who participated in this project.
 
 ## License
 
@@ -425,6 +434,6 @@ Licensed under the Apache License, Version 2.0 (the "License"); you may not use 
 
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+<https://www.apache.org/licenses/LICENSE-2.0>
 
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the [License](LICENSE) for the specific language governing permissions and limitations under the License.

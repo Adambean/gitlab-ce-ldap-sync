@@ -15,9 +15,9 @@ ldap:
         bindPassword:                   ~
 
     queries:
-        baseDn:                         ~
+        baseDn:                         ''
 
-        userDn:                         ~
+        userDn:                         ''
         userFilter:                     "(objectClass=inetOrgPerson)"
         userUniqueAttribute:            "uid"
         userMatchAttribute:             "uid"
@@ -25,7 +25,7 @@ ldap:
         userEmailAttribute:             "mail"
         userSshKeyAttribute:            "sshPublicKey"
 
-        groupDn:                        ~
+        groupDn:                        ''
         groupFilter:                    "(objectClass=groupOfUniqueNames)"
         groupUniqueAttribute:           "cn"
         groupMemberAttribute:           "memberUid"

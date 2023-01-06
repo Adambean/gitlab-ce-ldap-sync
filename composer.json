@@ -7,8 +7,12 @@
         "cocur/slugify": "^3.1",
         "m4tthumphrey/php-gitlab-api": "^9.19",
         "monolog/monolog": "^1.27",
-        "php-http/guzzle6-adapter": "^1.0",
+        "php-http/guzzle6-adapter": "^1.1",
         "symfony/console": "^5.4",
+        "symfony/polyfill-php80": "^1.27",
+        "symfony/polyfill-php81": "^1.27",
+        "symfony/polyfill-php82": "^1.27",
+        "symfony/polyfill-php83": "^1.27",
         "symfony/yaml": "^5.4"
     },
     "autoload": {
@@ -21,6 +25,7 @@
         "sort-packages": true
     },
     "require-dev": {
-        "phpstan/phpstan": "^0.12.99"
+        "phpstan/phpstan": "^1.9",
+        "phpstan/phpstan-symfony": "^1.2"
     }
 }
