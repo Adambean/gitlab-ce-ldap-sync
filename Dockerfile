@@ -28,6 +28,7 @@ RUN cp /tmp/docker/entrypoint.sh /entrypoint.sh \
     && chmod +x /healthcheck.sh \
     && cp /tmp/cron_task.sh /cron_task.sh \
     && chmod +x /cron_task.sh \
+    && cp /tmp/docker/example_config.yml /app/example_config.yml \
     && rm -rf /tmp/docker
 
 

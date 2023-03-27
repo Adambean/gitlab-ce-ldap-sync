@@ -5,20 +5,22 @@
  # @Author: Tao Chen
  # @Date: 2023-03-27 18:11:58
  # @LastEditors: Tao Chen
- # @LastEditTime: 2023-03-27 22:59:20
+ # @LastEditTime: 2023-03-27 23:13:46
 ### 
 # update-ca-certificates
 set -e
 
-if [ -z "$WORK_DIR" ]; then
-    WORK_DIR=/app
-fi
+WORK_DIR=/app
 
 if [ -z "$CONFIG_FILE" ]; then
     CONFIG_FILE=$WORK_DIR/config.yml
-else
-    ln -s $WORK_DIR/config.yml /app/config.yml
 fi
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Config file not found, use default config file."
+    $CONFIG_FILE=$WORK_DIR/config.yml.dist
+fi
+
+ln -s $CONFIG_FILE $WORK_DIR/config.yml
 
 if [ -z "$DRY_RUN" ]; then
     DRY_RUN=false
