@@ -5,7 +5,7 @@
  # @Author: Tao Chen
  # @Date: 2023-03-27 18:11:58
  # @LastEditors: Tao Chen
- # @LastEditTime: 2023-03-28 00:33:41
+ # @LastEditTime: 2023-03-28 00:46:55
 ### 
 
 
@@ -45,6 +45,15 @@ CRON_FILE=/var/spool/cron/crontabs/root
 # fi
 
 CRON_TASK_CMD="$MINUTE_SYMBOL $HOUR_SYMBOL $DAY_SYMBOL * * /cron_task.sh"
+
+echo "-------------------------------------------------------------"
+echo " Start at : $(date)"
+echo "-------------------------------------------------------------"
+echo "manual excute: /cron_task.sh"
+bash /cron_task.sh
+echo "Done"
+echo "-------------------------------------------------------------"
+
 echo "Cron task: $CRON_TASK_CMD"
 echo "$CRON_TASK_CMD" > $CRON_FILE
 
