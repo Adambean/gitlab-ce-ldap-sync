@@ -1,20 +1,13 @@
-#/bin/ash
+#!/bin/bash
 ###
  # @Descripttion: 
  # @version: 
  # @Author: Tao Chen
  # @Date: 2023-03-27 18:11:58
  # @LastEditors: Tao Chen
- # @LastEditTime: 2023-03-27 23:18:07
+ # @LastEditTime: 2023-03-28 00:01:34
 ### 
-###
- # @Descripttion: 
- # @version: 
- # @Author: Tao Chen
- # @Date: 2023-03-27 18:11:58
- # @LastEditors: Tao Chen
- # @LastEditTime: 2023-03-27 22:59:26
-### 
+
 
 if [ -z "$SYNC_INTERVAL_DAY" ]; then
     SYNC_INTERVAL_DAY=0
@@ -46,7 +39,9 @@ else
     MINUTE_SYMBOL="*"
 fi
 
-echo "$MINUTE_SYMBOL $SYNC_INTERVAL_HOUR $SYNC_INTERVAL_DAY * * /cron-task.sh" > /var/spool/cron/crontabs/root
+CRON_TASK="$MINUTE_SYMBOL $HOUR_SYMBOL $DAY_SYMBOL * * /cron-task.sh"
+echo "Cron task: $CRON_TASK"
+echo  $CRON_TASK > /var/spool/cron/crontabs/root
 
 echo "Starting crond"
 exec crond -f -l 0
