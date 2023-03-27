@@ -18,7 +18,7 @@ COPY . .
 
 # INSTALL COMPOSER
 #     && git clone git@github.com:Adambean/gitlab-ce-ldap-sync.git /app \
-SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer \
     && composer install
 

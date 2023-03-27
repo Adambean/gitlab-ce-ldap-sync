@@ -5,7 +5,7 @@
  # @Author: Tao Chen
  # @Date: 2023-03-27 18:11:58
  # @LastEditors: Tao Chen
- # @LastEditTime: 2023-03-28 00:01:34
+ # @LastEditTime: 2023-03-28 00:33:41
 ### 
 
 
@@ -39,9 +39,14 @@ else
     MINUTE_SYMBOL="*"
 fi
 
-CRON_TASK="$MINUTE_SYMBOL $HOUR_SYMBOL $DAY_SYMBOL * * /cron-task.sh"
-echo "Cron task: $CRON_TASK"
-echo  $CRON_TASK > /var/spool/cron/crontabs/root
+CRON_FILE=/var/spool/cron/crontabs/root
+# if [ -f "$CRON_FILE" ]; then
+#     rm -rf $CRON_FILE
+# fi
+
+CRON_TASK_CMD="$MINUTE_SYMBOL $HOUR_SYMBOL $DAY_SYMBOL * * /cron_task.sh"
+echo "Cron task: $CRON_TASK_CMD"
+echo "$CRON_TASK_CMD" > $CRON_FILE
 
 echo "Starting crond"
 exec crond -f -l 0
