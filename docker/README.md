@@ -24,6 +24,6 @@ where is the config.yml. default is /app/config.yml
 default is false. If you set as true, this docker don't sysn really.
 
 #### DEBUG_V
-default is "v".
+default is "v". if set as "NULL", there are no output
 
 

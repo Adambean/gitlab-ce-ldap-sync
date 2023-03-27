@@ -5,7 +5,7 @@
  # @Author: Tao Chen
  # @Date: 2023-03-27 18:11:58
  # @LastEditors: Tao Chen
- # @LastEditTime: 2023-03-28 00:33:53
+ # @LastEditTime: 2023-03-28 00:38:26
 ### 
 
 echo "-------------------------------------------------------------"
@@ -36,7 +36,7 @@ if [ -z "$DRY_RUN" ]; then
 fi
 
 if [ -z "$DEBUG_V" ]; then
-    DEBUG_V="-vvvv"
+    DEBUG_V="-v"
 elif [ $DEBUG_V = "NULL" ]; then
     DEBUG_V=""
 else
