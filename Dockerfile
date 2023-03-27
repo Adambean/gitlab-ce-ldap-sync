@@ -13,12 +13,13 @@ RUN apk add --no-cache bash curl git tini \
 # RUN install-php-extensions ldap
 
 WORKDIR /app
+COPY . .
 # USER www-data
 
 # INSTALL COMPOSER
+#     && git clone git@github.com:Adambean/gitlab-ce-ldap-sync.git /app \
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer \
-    && git clone git@github.com:Adambean/gitlab-ce-ldap-sync.git /app \
     && composer install
 
 ADD ./docker /tmp/docker
