@@ -21,13 +21,13 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      * -------------------------------------------------------------------------
      */
 
-    /** @const string User's configuration file name. */
+    /** @var string User's configuration file name. */
     const CONFIG_FILE_NAME = "config.yml";
 
-    /** @const string Distributed configuration file name. */
+    /** @var string Distributed configuration file name. */
     const CONFIG_FILE_DIST_NAME = "config.yml.dist";
 
-    /** @const int Wait this long (in microseconds) between Gitlab API calls to avoid flooding. */
+    /** @var int Wait this long (in microseconds) between Gitlab API calls to avoid flooding. */
     const API_COOL_DOWN_USECONDS = 100000;
 
 
