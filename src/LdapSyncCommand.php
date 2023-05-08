@@ -75,8 +75,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             ->setDescription("Sync LDAP users and groups with a Gitlab CE/EE self-hosted installation.")
             ->addOption("dryrun", "d", InputOption::VALUE_NONE, "Dry run: Do not persist any changes.")
             ->addOption("continueOnFail", null, InputOption::VALUE_NONE, "Do not abort on certain errors. (Continue running if possible.)")
-            ->addArgument("instance", InputArgument::OPTIONAL, "Sync with a specific instance, or leave unspecified to work with all.")
-        ;
+            ->addArgument("instance", InputArgument::OPTIONAL, "Sync with a specific instance, or leave unspecified to work with all.");
     }
 
     /**
@@ -308,7 +307,6 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
             $this->logger->$type(sprintf("Configuration: %s", $message));
             $problems[$type][] = $message;
-
         };
 
         // << LDAP
@@ -1103,8 +1101,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
         $this->logger->debug("Gitlab: Connecting");
         $gitlab = \Gitlab\Client::create($gitlabConfig["url"])
-            ->authenticate($gitlabConfig["token"], \Gitlab\Client::AUTH_HTTP_TOKEN)
-        ;
+            ->authenticate($gitlabConfig["token"], \Gitlab\Client::AUTH_HTTP_TOKEN);
 
         // << Handle users
         $usersSync = [
@@ -1655,15 +1652,13 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                     continue;
                 }
 
-                // $this->logger->info(sprintf("Adding user #%d \"%s\" to group #%d \"%s\" [%s].", $gitlabUserId, $gitlabUserName, $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
-                // $gitlabGroupMember = null;
+                $this->logger->info(sprintf("Adding user #%d \"%s\" to group #%d \"%s\" [%s].", $gitlabUserId, $gitlabUserName, $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
+                $gitlabGroupMember = null;
                 try {
                     !$this->dryRun ? ($gitlabGroupMember = $gitlab->api("groups")->addMember($gitlabGroupId, $gitlabUserId, $config["gitlab"]["options"]["newMemberAccessLevel"])) : $this->logger->warning("Operation skipped due to dry run.");
                 } catch (\Exception $e) {
                     $this->logger->error(sprintf("Gitlab failure: %s", $e->getMessage()), ["error" => $e]);
                 }
-                !$this->dryRun ? ($gitlabGroupMember = $gitlab->api("groups")->addMember($gitlabGroupId, $gitlabUserId, $config["gitlab"]["options"]["newMemberAccessLevel"])) : $this->logger->warning("Operation skipped due to dry run.");
-
                 $gitlabGroupMemberId = (is_array($gitlabGroupMember) && isset($gitlabGroupMember["id"]) && is_int($gitlabGroupMember["id"])) ? $gitlabGroupMember["id"] : sprintf("dry:%s:%d", $gitlabGroupPath, $gitlabUserId);
                 $userGroupMembersSync["new"][$gitlabUserId] = $gitlabUserName;
 
