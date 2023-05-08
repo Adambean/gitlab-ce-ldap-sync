@@ -8,7 +8,6 @@
  # @LastEditTime: 2023-03-27 23:00:32
 ### 
 
-#!/usr/bin/env bash
 set -x
 
 # Make sure cron daemon is still running

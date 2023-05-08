@@ -27,3 +27,27 @@ default is false. If you set as true, this docker don't sysn really.
 default is "v".
 
 
+## Example
+```yaml
+version: "3.7"
+
+services:
+
+    gitlab-ldap-sync:
+        build: 
+            context: ./ldap-sync/github
+            dockerfile: Dockerfile
+        image: my/gitlab-ldap-sync
+        container_name: gitlab-ldap-sync
+        hostname: gitlab-ldap-sync
+        privileged: false
+        network_mode: host
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - ./ldap-sync/config.yml:/app/config.yml
+        environment:
+            DRY_RUN: false
+            SYNC_INTERVAL_MINUTE: 5
+            DEBUG_V: "v"
+```
+

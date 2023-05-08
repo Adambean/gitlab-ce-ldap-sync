@@ -4,7 +4,7 @@ FROM php:7.4.9-cli-alpine3.12
 
 COPY --from=installer /usr/bin/install-php-extensions /usr/bin/
 
-RUN apk add --no-cache bash curl git tini \
+RUN apk add --no-cache bash curl tini\
     && rm -rf /var/cache/apk/* \
     && install-php-extensions ldap \
     && mkdir -p /app
@@ -18,7 +18,7 @@ COPY . .
 
 # INSTALL COMPOSER
 #     && git clone git@github.com:Adambean/gitlab-ce-ldap-sync.git /app \
-SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer \
     && composer install
 
