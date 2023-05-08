@@ -1,0 +1,50 @@
+# If you don't know what you're doing check "README.md" for more details before
+# filing a request for help.
+
+ldap:
+    debug:                  false
+    winCompatibilityMode:   false
+
+    server:
+        host:                           ~
+        port:                           ~
+        version:                        3
+        encryption:                     ~
+
+        bindDn:                         ~
+        bindPassword:                   ~
+
+    queries:
+        baseDn:                         ''
+
+        userDn:                         ''
+        userFilter:                     "(objectClass=inetOrgPerson)"
+        userUniqueAttribute:            "uid"
+        userMatchAttribute:             "uid"
+        userNameAttribute:              "cn"
+        userEmailAttribute:             "mail"
+
+        groupDn:                        ''
+        groupFilter:                    "(objectClass=groupOfUniqueNames)"
+        groupUniqueAttribute:           "cn"
+        groupMemberAttribute:           "memberUid"
+
+gitlab:
+    debug: false
+
+    options:
+        userNamesToIgnore:              []
+        groupNamesToIgnore:             []
+
+        createEmptyGroups:              false
+        deleteExtraGroups:              false
+        newMemberAccessLevel:           30
+
+        groupNamesOfAdministrators:     []
+        groupNamesOfExternal:           []
+
+    instances:
+        example:
+            url:            ~
+            token:          ~
+            ldapServerName: ~

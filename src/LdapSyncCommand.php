@@ -77,8 +77,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             ->setDescription("Sync LDAP users and groups with a Gitlab CE/EE self-hosted installation.")
             ->addOption("dryrun", "d", InputOption::VALUE_NONE, "Dry run: Do not persist any changes.")
             ->addOption("continueOnFail", null, InputOption::VALUE_NONE, "Do not abort on certain errors. (Continue running if possible.)")
-            ->addArgument("instance", InputArgument::OPTIONAL, "Sync with a specific instance, or leave unspecified to work with all.")
-        ;
+            ->addArgument("instance", InputArgument::OPTIONAL, "Sync with a specific instance, or leave unspecified to work with all.");
     }
 
     /**
@@ -310,7 +309,6 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
             $this->logger->$type(sprintf("Configuration: %s", $message));
             $problems[$type][] = $message;
-
         };
 
         // << LDAP
@@ -564,7 +562,16 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 } elseif (!is_bool($config["gitlab"]["options"]["createEmptyGroups"])) {
                     $addProblem("error", "gitlab->options->createEmptyGroups is not a boolean.");
                 }
-
+                if (!isset($config["gitlab"]["options"]["unsyncExtraGroups"])) {
+                    $addProblem("warning", "gitlab->options->unsyncExtraGroups missing. (Assuming true.)");
+                    $config["gitlab"]["options"]["unsyncExtraGroups"] = true;
+                } elseif ("" === $config["gitlab"]["options"]["unsyncExtraGroups"]) {
+                    $addProblem("warning", "gitlab->options->unsyncExtraGroups not specified. (Assuming true.)");
+                    $config["gitlab"]["options"]["unsyncExtraGroups"] = true;
+                } elseif (!is_bool($config["gitlab"]["options"]["unsyncExtraGroups"])) {
+                    $addProblem("error", "gitlab->options->unsyncExtraGroups is not a boolean.");
+                }
+                
                 if (!isset($config["gitlab"]["options"]["deleteExtraGroups"])) {
                     $addProblem("warning", "gitlab->options->deleteExtraGroups missing. (Assuming false.)");
                     $config["gitlab"]["options"]["deleteExtraGroups"] = false;
@@ -1105,8 +1112,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
         $this->logger->debug("Gitlab: Connecting");
         $gitlab = \Gitlab\Client::create($gitlabConfig["url"])
-            ->authenticate($gitlabConfig["token"], \Gitlab\Client::AUTH_HTTP_TOKEN)
-        ;
+            ->authenticate($gitlabConfig["token"], \Gitlab\Client::AUTH_HTTP_TOKEN);
 
         // << Handle users
         $usersSync = [
@@ -1462,6 +1468,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $ldapGroupMembers = $ldapGroupsSafe[$gitlabGroupName];
 
             $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
+            $groupsSync["extra"][$gitlabGroupId] = $gitlabGroupName;
             if ((is_array($ldapGroupMembers) && !empty($ldapGroupMembers)) || !$config["gitlab"]["options"]["deleteExtraGroups"]) {
                 $this->logger->info(sprintf("Not deleting Gitlab group #%d \"%s\" [%s]: Has members in directory group, or config gitlab->options->deleteExtraGroups is disabled.", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                 continue;
@@ -1481,12 +1488,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $gitlabGroup = null;
 
             !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->remove($gitlabGroupId)) : $this->logger->warning("Operation skipped due to dry run.");
-
-            $groupsSync["extra"][$gitlabGroupId] = $gitlabGroupName;
-
             $this->gitlabApiCoolDown();
         }
-
         asort($groupsSync["extra"]);
         $this->logger->notice(sprintf("%d Gitlab group(s) deleted.", $groupsSync["extraNum"] = count($groupsSync["extra"])));
 
@@ -1547,8 +1550,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $usersToSyncMembership  = ($usersSync["found"] + $usersSync["new"] + $usersSync["update"]);
         asort($usersToSyncMembership);
         $groupsToSyncMembership = ($groupsSync["found"] + $groupsSync["new"] + $groupsSync["update"]);
+        if ($config["gitlab"]["options"]["unsyncExtraGroups"])
+        {
+            $this->logger->info("unsyncExtraGroups is enabled, so unsyncing extra groups from directory groups...");
+            $groupsToSyncMembership = array_diff($groupsToSyncMembership, $groupsSync["extra"]);
+        }
         asort($groupsToSyncMembership);
-
         $this->logger->notice("Synchronising Gitlab group members with directory group members...");
         foreach ($groupsToSyncMembership as $gitlabGroupId => $gitlabGroupName) {
             if ("Root" == $gitlabGroupName) {
@@ -1659,9 +1666,11 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
                 $this->logger->info(sprintf("Adding user #%d \"%s\" to group #%d \"%s\" [%s].", $gitlabUserId, $gitlabUserName, $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                 $gitlabGroupMember = null;
-
-                !$this->dryRun ? ($gitlabGroupMember = $gitlab->api("groups")->addMember($gitlabGroupId, $gitlabUserId, $config["gitlab"]["options"]["newMemberAccessLevel"])) : $this->logger->warning("Operation skipped due to dry run.");
-
+                try {
+                    !$this->dryRun ? ($gitlabGroupMember = $gitlab->api("groups")->addMember($gitlabGroupId, $gitlabUserId, $config["gitlab"]["options"]["newMemberAccessLevel"])) : $this->logger->warning("Operation skipped due to dry run.");
+                } catch (\Exception $e) {
+                    $this->logger->error(sprintf("Gitlab failure: %s", $e->getMessage()), ["error" => $e]);
+                }
                 $gitlabGroupMemberId = (is_array($gitlabGroupMember) && isset($gitlabGroupMember["id"]) && is_int($gitlabGroupMember["id"])) ? $gitlabGroupMember["id"] : sprintf("dry:%s:%d", $gitlabGroupPath, $gitlabUserId);
                 $userGroupMembersSync["new"][$gitlabUserId] = $gitlabUserName;
 
@@ -1670,7 +1679,6 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
             asort($userGroupMembersSync["new"]);
             $this->logger->notice(sprintf("%d Gitlab group \"%s\" [%s] member(s) added.", $userGroupMembersSync["newNum"] = count($userGroupMembersSync["new"]), $gitlabGroupName, $gitlabGroupPath));
-
             // Delete extra group members
             $this->logger->notice("Deleting extra group members...");
             foreach ($userGroupMembersSync["found"] as $gitlabUserId => $gitlabUserName) {
@@ -1789,7 +1797,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      */
     private function getBuiltInUserNames()
     {
-        return ["root", "ghost", "support-bot", "alert-bot"];
+        return ["root", "ghost", "support-bot", "alert-bot","visual-review-bot"];
     }
 
     /**
