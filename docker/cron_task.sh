@@ -1,16 +1,9 @@
 #!/bin/bash
-###
- # @Descripttion: 
- # @version: 
- # @Author: Tao Chen
- # @Date: 2023-03-27 18:11:58
- # @LastEditors: Tao Chen
- # @LastEditTime: 2023-03-27 23:23:53
+
 ### 
 echo "-------------------------------------------------------------"
 echo " Executing Cron Tasks: $(date)"
 echo "-------------------------------------------------------------"
-
 set -e
 
 WORK_DIR=/app

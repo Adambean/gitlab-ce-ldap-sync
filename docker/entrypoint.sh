@@ -1,13 +1,4 @@
 #!/bin/bash
-###
- # @Descripttion: 
- # @version: 
- # @Author: Tao Chen
- # @Date: 2023-03-27 18:11:58
- # @LastEditors: Tao Chen
- # @LastEditTime: 2023-03-27 23:18:07
-### 
-
 
 if [ -z "$SYNC_INTERVAL_DAY" ]; then
     SYNC_INTERVAL_DAY=0
