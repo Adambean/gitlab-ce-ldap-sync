@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace AdamReece\GitlabCeLdapSync;
 
 use Symfony\Component\Console\Input\InputArgument;
@@ -21,13 +23,13 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      * -------------------------------------------------------------------------
      */
 
-    /** @const string User's configuration file name. */
+    /** @var string User's configuration file name. */
     const CONFIG_FILE_NAME = "config.yml";
 
-    /** @const string Distributed configuration file name. */
+    /** @var string Distributed configuration file name. */
     const CONFIG_FILE_DIST_NAME = "config.yml.dist";
 
-    /** @const int Wait this long (in microseconds) between Gitlab API calls to avoid flooding. */
+    /** @var int Wait this long (in microseconds) between Gitlab API calls to avoid flooding. */
     const API_COOL_DOWN_USECONDS = 100000;
 
 
@@ -39,22 +41,22 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      */
 
     /** @var ConsoleLogger Console logger interface */
-    private $logger = null;
+    private ConsoleLogger $logger;
 
     /** @var bool Debug mode */
-    private $dryRun = false;
+    private bool $dryRun = false;
 
     /** @var bool Continue on failure: Do not abort on certain errors */
-    private $continueOnFail = false;
+    private bool $continueOnFail = false;
 
     /** @var string Application root directory */
-    private $rootDir = null;
+    private string $rootDir = "";
 
     /** @var string User's configuration file pathname. */
-    private $configFilePathname = null;
+    private string $configFilePathname = "";
 
     /** @var string Distribution configuration file pathname. */
-    private $configFileDistPathname = null;
+    private string $configFileDistPathname = "";
 
 
 
