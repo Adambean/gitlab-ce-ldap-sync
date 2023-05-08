@@ -562,7 +562,16 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 } elseif (!is_bool($config["gitlab"]["options"]["createEmptyGroups"])) {
                     $addProblem("error", "gitlab->options->createEmptyGroups is not a boolean.");
                 }
-
+                if (!isset($config["gitlab"]["options"]["unsyncExtraGroups"])) {
+                    $addProblem("warning", "gitlab->options->unsyncExtraGroups missing. (Assuming true.)");
+                    $config["gitlab"]["options"]["unsyncExtraGroups"] = true;
+                } elseif ("" === $config["gitlab"]["options"]["unsyncExtraGroups"]) {
+                    $addProblem("warning", "gitlab->options->unsyncExtraGroups not specified. (Assuming true.)");
+                    $config["gitlab"]["options"]["unsyncExtraGroups"] = true;
+                } elseif (!is_bool($config["gitlab"]["options"]["unsyncExtraGroups"])) {
+                    $addProblem("error", "gitlab->options->unsyncExtraGroups is not a boolean.");
+                }
+                
                 if (!isset($config["gitlab"]["options"]["deleteExtraGroups"])) {
                     $addProblem("warning", "gitlab->options->deleteExtraGroups missing. (Assuming false.)");
                     $config["gitlab"]["options"]["deleteExtraGroups"] = false;
@@ -1459,6 +1468,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $ldapGroupMembers = $ldapGroupsSafe[$gitlabGroupName];
 
             $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
+            $groupsSync["extra"][$gitlabGroupId] = $gitlabGroupName;
             if ((is_array($ldapGroupMembers) && !empty($ldapGroupMembers)) || !$config["gitlab"]["options"]["deleteExtraGroups"]) {
                 $this->logger->info(sprintf("Not deleting Gitlab group #%d \"%s\" [%s]: Has members in directory group, or config gitlab->options->deleteExtraGroups is disabled.", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                 continue;
@@ -1478,12 +1488,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $gitlabGroup = null;
 
             !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->remove($gitlabGroupId)) : $this->logger->warning("Operation skipped due to dry run.");
-
-            $groupsSync["extra"][$gitlabGroupId] = $gitlabGroupName;
-
             $this->gitlabApiCoolDown();
         }
-
         asort($groupsSync["extra"]);
         $this->logger->notice(sprintf("%d Gitlab group(s) deleted.", $groupsSync["extraNum"] = count($groupsSync["extra"])));
 
@@ -1544,8 +1550,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $usersToSyncMembership  = ($usersSync["found"] + $usersSync["new"] + $usersSync["update"]);
         asort($usersToSyncMembership);
         $groupsToSyncMembership = ($groupsSync["found"] + $groupsSync["new"] + $groupsSync["update"]);
+        if ($config["gitlab"]["options"]["unsyncExtraGroups"])
+        {
+            $this->logger->info("unsyncExtraGroups is enabled, so unsyncing extra groups from directory groups...");
+            $groupsToSyncMembership = array_diff($groupsToSyncMembership, $groupsSync["extra"]);
+        }
         asort($groupsToSyncMembership);
-
         $this->logger->notice("Synchronising Gitlab group members with directory group members...");
         foreach ($groupsToSyncMembership as $gitlabGroupId => $gitlabGroupName) {
             if ("Root" == $gitlabGroupName) {
@@ -1669,7 +1679,6 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
             asort($userGroupMembersSync["new"]);
             $this->logger->notice(sprintf("%d Gitlab group \"%s\" [%s] member(s) added.", $userGroupMembersSync["newNum"] = count($userGroupMembersSync["new"]), $gitlabGroupName, $gitlabGroupPath));
-
             // Delete extra group members
             $this->logger->notice("Deleting extra group members...");
             foreach ($userGroupMembersSync["found"] as $gitlabUserId => $gitlabUserName) {

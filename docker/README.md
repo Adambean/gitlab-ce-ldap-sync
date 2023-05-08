@@ -77,3 +77,8 @@ services:
             DEBUG_V: "v"
 ```
 
+
+### addingtion
+config.yml add new setting.
+`gitlab.options.unsyncExtraGroups` default is `false`
+if set true, this script would ignore the groups cerated in gitlab but not in LDAP
