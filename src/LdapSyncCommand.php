@@ -1788,7 +1788,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
      */
     private function getBuiltInUserNames()
     {
-        return ["root", "ghost", "support-bot", "alert-bot"];
+        return ["root", "ghost", "support-bot", "alert-bot","visual-review-bot"];
     }
 
     /**
