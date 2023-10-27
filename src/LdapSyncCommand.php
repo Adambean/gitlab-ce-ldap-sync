@@ -289,9 +289,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
         /**
          * @var callable $addProblem Add a problem.
-         * @param  string                      $type     Problem type (error or warning)
-         * @param  string                      $message  Problem description
-         * @uses   array<string,string[]>|null $problems Optional output of problems indexed by type
+         * @param  string                       $type     Problem type (error or warning)
+         * @param  string                       $message  Problem description
+         * @uses   array<string, string[]>|null $problems Optional output of problems indexed by type
          * @return void
          */
         $addProblem = function (string $type, string $message) use (&$problems): void {
@@ -1104,9 +1104,9 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         ]);
 
         $this->logger->debug("Gitlab: Connecting");
-        $gitlab = \Gitlab\Client::create($gitlabConfig["url"])
-            ->authenticate($gitlabConfig["token"], \Gitlab\Client::AUTH_HTTP_TOKEN)
-        ;
+        $gitlab = new \Gitlab\Client();
+        $gitlab->setUrl($gitlabConfig["url"]);
+        $gitlab->authenticate($gitlabConfig["token"], \Gitlab\Client::AUTH_HTTP_TOKEN);
 
         // << Handle users
         $usersSync = [
@@ -1124,7 +1124,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $this->logger->notice("Finding all existing Gitlab users...");
         $p = 0;
 
-        while (is_array($gitlabUsers = $gitlab->api("users")->all(["page" => ++$p, "per_page" => 100])) && !empty($gitlabUsers)) {
+        while (is_array($gitlabUsers = $gitlab->users()->all(["page" => ++$p, "per_page" => 100])) && !empty($gitlabUsers)) {
             foreach ($gitlabUsers as $i => $gitlabUser) {
                 $n = $i + 1;
 
@@ -1196,7 +1196,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $this->logger->debug(sprintf("Password for Gitlab user \"%s\" [%s] will be: %s", $gitlabUserName, $ldapUserDetails["dn"], $gitlabUserPassword));
 
             try {
-                !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->create($ldapUserDetails["email"], $gitlabUserPassword, [
+                !$this->dryRun ? ($gitlabUser = $gitlab->users()->create($ldapUserDetails["email"], $gitlabUserPassword, [
                     "username"          => $gitlabUserName,
                     "reset_password"    => false,
                     "name"              => $ldapUserDetails["fullName"],
@@ -1251,8 +1251,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $this->logger->warning(sprintf("Disabling Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
             $gitlabUser = null;
 
-            !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->block($gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
-            !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->update($gitlabUserId, [
+            !$this->dryRun ? ($gitlabUser = $gitlab->users()->block($gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
+            !$this->dryRun ? ($gitlabUser = $gitlab->users()->update($gitlabUserId, [
                 "admin"             => false,
                 "can_create_group"  => false,
                 "external"          => true,
@@ -1283,10 +1283,10 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
-            if ($gitlab->api("users")->all(["username" => $gitlabUserName, "blocked" => true])) {
+            if ($gitlab->users()->all(["username" => $gitlabUserName, "blocked" => true])) {
                 $this->logger->info(sprintf("Enabling Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
                 $gitlabUser = null;
-                !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->unblock($gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
+                !$this->dryRun ? ($gitlabUser = $gitlab->users()->unblock($gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
             }
 
             $this->logger->info(sprintf("Updating Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
@@ -1298,7 +1298,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             }
             $ldapUserDetails = $ldapUsers[$gitlabUserName];
 
-            !$this->dryRun ? ($gitlabUser = $gitlab->api("users")->update($gitlabUserId, [
+            !$this->dryRun ? ($gitlabUser = $gitlab->users()->update($gitlabUserId, [
                 // "username"          => $gitlabUserName,
                 // No point updating that. ^
                 // If the UID changes so will that bit of the DN anyway, so this can't be detected with a custom attribute containing the Gitlab user ID written back to user's LDAP object.
@@ -1338,7 +1338,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         $this->logger->notice("Finding all existing Gitlab groups...");
         $p = 0;
 
-        while (is_array($gitlabGroups = $gitlab->api("groups")->all(["page" => ++$p, "per_page" => 100, "all_available" => true])) && !empty($gitlabGroups)) {
+        while (is_array($gitlabGroups = $gitlab->groups()->all(["page" => ++$p, "per_page" => 100, "all_available" => true])) && !empty($gitlabGroups)) {
             foreach ($gitlabGroups as $i => $gitlabGroup) {
                 $n = $i + 1;
 
@@ -1427,7 +1427,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $this->logger->info(sprintf("Creating Gitlab group \"%s\" [%s].", $gitlabGroupName, $gitlabGroupPath));
             $gitlabGroup = null;
 
-            !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->create($gitlabGroupName, $gitlabGroupPath)) : $this->logger->warning("Operation skipped due to dry run.");
+            !$this->dryRun ? ($gitlabGroup = $gitlab->groups()->create($gitlabGroupName, $gitlabGroupPath)) : $this->logger->warning("Operation skipped due to dry run.");
 
             $gitlabGroupId = (is_array($gitlabGroup) && isset($gitlabGroup["id"]) && is_int($gitlabGroup["id"])) ? $gitlabGroup["id"] : sprintf("dry:%s", $gitlabGroupPath);
             $groupsSync["new"][$gitlabGroupId] = $gitlabGroupName;
@@ -1467,12 +1467,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
-            if (is_array($gitlabGroupProjects = $gitlab->api("groups")->projects($gitlabGroupId)) && ($gitlabGroupProjectsNum = count($gitlabGroupProjects)) >= 1) {
+            if (is_array($gitlabGroupProjects = $gitlab->groups()->projects($gitlabGroupId)) && ($gitlabGroupProjectsNum = count($gitlabGroupProjects)) >= 1) {
                 $this->logger->info(sprintf("Not deleting Gitlab group #%d \"%s\" [%s]: It contains %d project(s).", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath, $gitlabGroupProjectsNum));
                 continue;
             }
 
-            if (is_array($gitlabGroupSubGroups = $gitlab->api("groups")->subgroups($gitlabGroupId)) && ($gitlabGroupSubGroupsNum = count($gitlabGroupSubGroups)) >= 1) {
+            if (is_array($gitlabGroupSubGroups = $gitlab->groups()->subgroups($gitlabGroupId)) && ($gitlabGroupSubGroupsNum = count($gitlabGroupSubGroups)) >= 1) {
                 $this->logger->info(sprintf("Not deleting Gitlab group #%d \"%s\" [%s]: It contains %d subgroup(s).", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath, $gitlabGroupSubGroupsNum));
                 continue;
             }
@@ -1480,7 +1480,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $this->logger->warning(sprintf("Deleting Gitlab group #%d \"%s\" [%s].", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
             $gitlabGroup = null;
 
-            !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->remove($gitlabGroupId)) : $this->logger->warning("Operation skipped due to dry run.");
+            !$this->dryRun ? ($gitlabGroup = $gitlab->groups()->remove($gitlabGroupId)) : $this->logger->warning("Operation skipped due to dry run.");
 
             $groupsSync["extra"][$gitlabGroupId] = $gitlabGroupName;
 
@@ -1524,7 +1524,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $ldapGroupMembers = $ldapGroupsSafe[$gitlabGroupName];
 
             /*
-            !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->update($gitlabGroupId, [
+            !$this->dryRun ? ($gitlabGroup = $gitlab->groups()->update($gitlabGroupId, [
                 // "name"              => $gitlabGroupName,
                 // No point updating that. ^
                 // If the CN changes so will that bit of the DN anyway, so this can't be detected with a custom attribute containing the Gitlab group ID written back to group's LDAP object.
@@ -1599,7 +1599,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $this->logger->notice("Finding existing group members...");
             $p = 0;
 
-            while (is_array($gitlabUsers = $gitlab->api("groups")->members($gitlabGroupId, ["page" => ++$p, "per_page" => 100])) && !empty($gitlabUsers)) {
+            while (is_array($gitlabUsers = $gitlab->groups()->members($gitlabGroupId, ["page" => ++$p, "per_page" => 100])) && !empty($gitlabUsers)) {
                 foreach ($gitlabUsers as $i => $gitlabUser) {
                     $n = $i + 1;
 
@@ -1660,7 +1660,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 $this->logger->info(sprintf("Adding user #%d \"%s\" to group #%d \"%s\" [%s].", $gitlabUserId, $gitlabUserName, $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                 $gitlabGroupMember = null;
 
-                !$this->dryRun ? ($gitlabGroupMember = $gitlab->api("groups")->addMember($gitlabGroupId, $gitlabUserId, $config["gitlab"]["options"]["newMemberAccessLevel"])) : $this->logger->warning("Operation skipped due to dry run.");
+                !$this->dryRun ? ($gitlabGroupMember = $gitlab->groups()->addMember($gitlabGroupId, $gitlabUserId, $config["gitlab"]["options"]["newMemberAccessLevel"])) : $this->logger->warning("Operation skipped due to dry run.");
 
                 $gitlabGroupMemberId = (is_array($gitlabGroupMember) && isset($gitlabGroupMember["id"]) && is_int($gitlabGroupMember["id"])) ? $gitlabGroupMember["id"] : sprintf("dry:%s:%d", $gitlabGroupPath, $gitlabUserId);
                 $userGroupMembersSync["new"][$gitlabUserId] = $gitlabUserName;
@@ -1681,7 +1681,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 $this->logger->info(sprintf("Deleting user #%d \"%s\" from group #%d \"%s\" [%s].", $gitlabUserId, $gitlabUserName, $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                 $gitlabGroupMember = null;
 
-                !$this->dryRun ? ($gitlabGroup = $gitlab->api("groups")->removeMember($gitlabGroupId, $gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
+                !$this->dryRun ? ($gitlabGroup = $gitlab->groups()->removeMember($gitlabGroupId, $gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
 
                 $userGroupMembersSync["extra"][$gitlabUserId] = $gitlabUserName;
 
@@ -1706,7 +1706,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 $this->logger->info(sprintf("Updating user #%d \"%s\" in group #%d \"%s\" [%s].", $gitlabUserId, $gitlabUserName, $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                 $gitlabGroupMember = null;
 
-                !$this->dryRun ? ($gitlabGroupMember = $gitlab->api("groups")->saveMember($gitlabGroupId, $gitlabUserId, $config["gitlab"]["options"]["newMemberAccessLevel"])) : $this->logger->warning("Operation skipped due to dry run.");
+                !$this->dryRun ? ($gitlabGroupMember = $gitlab->groups()->saveMember($gitlabGroupId, $gitlabUserId, $config["gitlab"]["options"]["newMemberAccessLevel"])) : $this->logger->warning("Operation skipped due to dry run.");
 
                 $userGroupMembersSync["update"][$gitlabUserId] = $gitlabUserName;
             }
