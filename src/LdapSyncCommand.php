@@ -1231,45 +1231,21 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         asort($usersSync["new"]);
         $this->logger->notice(sprintf("%d Gitlab user(s) created.", $usersSync["newNum"] = count($usersSync["new"])));
 
-        // Disable Gitlab users of which don't exist in directory
-        $this->logger->notice("Disabling Gitlab users of which don't exist in directory...");
+        // Synchronise users of between Gitlab and the directory
+        $this->logger->notice("Synchronising users of between Gitlab and the directory...");
         foreach ($usersSync["found"] as $gitlabUserId => $gitlabUserName) {
-            if ($this->in_array_i($gitlabUserName, $this->getBuiltInUserNames())) {
-                $this->logger->info(sprintf("Gitlab built-in %s user will be ignored.", $gitlabUserName));
+            $gitlabUser = $gitlab->users()->show($gitlabUserId);
+            if (!is_array($gitlabUser) || empty($gitlabUser)) {
+                $this->logger->error(sprintf("Gitlab user #%d \"%s\" could not be retrieved.", $gitlabUserId, $gitlabUserName));
                 continue;
             }
 
-            if ($this->in_array_i($gitlabUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
-                $this->logger->info(sprintf("User \"%s\" in ignore list.", $gitlabUserName));
+            if (isset($gitlabUser) && true === $gitlabUser["bot"]) {
+                $this->logger->info(sprintf("Gitlab user #%d \"%s\" is a bot, ignoring.", $gitlabUserId, $gitlabUserName));
                 continue;
             }
 
-            if (isset($ldapUsers[$gitlabUserName]) && is_array($ldapUsers[$gitlabUserName])) {
-                continue;
-            }
-
-            $this->logger->warning(sprintf("Disabling Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
-            $gitlabUser = null;
-
-            !$this->dryRun ? ($gitlabUser = $gitlab->users()->block($gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
-            !$this->dryRun ? ($gitlabUser = $gitlab->users()->update($gitlabUserId, [
-                "admin"             => false,
-                "can_create_group"  => false,
-                "external"          => true,
-            ])) : $this->logger->warning("Operation skipped due to dry run.");
-
-            $usersSync["extra"][$gitlabUserId] = $gitlabUserName;
-
-            $this->gitlabApiCoolDown();
-        }
-
-        asort($usersSync["extra"]);
-        $this->logger->notice(sprintf("%d Gitlab user(s) disabled.", $usersSync["extraNum"] = count($usersSync["extra"])));
-
-        // Update users of which were already in both Gitlab and the directory
-        $this->logger->notice("Updating users of which were already in both Gitlab and the directory...");
-        foreach ($usersSync["found"] as $gitlabUserId => $gitlabUserName) {
-            if (!empty($usersSync["new"][$gitlabUserId]) || !empty($usersSync["extra"][$gitlabUserId])) {
+            if (!empty($usersSync["new"][$gitlabUserId])) {
                 continue;
             }
 
@@ -1283,43 +1259,62 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 continue;
             }
 
-            if ($gitlab->users()->all(["username" => $gitlabUserName, "blocked" => true])) {
-                $this->logger->info(sprintf("Enabling Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
-                $gitlabUser = null;
-                !$this->dryRun ? ($gitlabUser = $gitlab->users()->unblock($gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
+            if (isset($ldapUsers[$gitlabUserName]) && is_array($ldapUsers[$gitlabUserName]) && !empty($ldapUsers[$gitlabUserName])) {
+                // User exists in directory: Update
+                if ("ldap_blocked" === $gitlabUser["state"]) {
+                    $this->logger->warning(sprintf("Gitlab user #%d \"%s\" is LDAP blocked, can't update.", $gitlabUserId, $gitlabUserName));
+                    continue;
+                }
+
+                if ("blocked" === $gitlabUser["state"]) {
+                    $this->logger->info(sprintf("Enabling Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
+                    !$this->dryRun ? ($gitlabUser = $gitlab->users()->unblock($gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
+                }
+
+                $this->logger->info(sprintf("Updating Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
+                $ldapUserDetails = $ldapUsers[$gitlabUserName];
+
+                !$this->dryRun ? ($gitlabUser = $gitlab->users()->update($gitlabUserId, [
+                    // "username"          => $gitlabUserName,
+                    // No point updating that. ^
+                    // If the UID changes so will that bit of the DN anyway, so this can't be detected with a custom attribute containing the Gitlab user ID written back to user's LDAP object.
+                    "reset_password"    => false,
+                    "name"              => $ldapUserDetails["fullName"],
+                    "extern_uid"        => $ldapUserDetails["dn"],
+                    "provider"          => $gitlabConfig["ldapServerName"],
+                    "email"             => $ldapUserDetails["email"],
+                    "admin"             => $ldapUserDetails["isAdmin"],
+                    "can_create_group"  => $ldapUserDetails["isAdmin"],
+                    "skip_confirmation" => true,
+                    "external"          => $ldapUserDetails["isExternal"],
+                ])) : $this->logger->warning("Operation skipped due to dry run.");
+
+                $usersSync["update"][$gitlabUserId] = $gitlabUserName;
+            } else {
+                // User does not exist in directory: Disable
+                if (in_array($gitlabUser["state"], ["blocked", "ldap_blocked"], true)) {
+                    $this->logger->debug(sprintf("Gitlab user #%d \"%s\" already disabled.", $gitlabUserId, $gitlabUserName));
+                    continue;
+                }
+
+                $this->logger->warning(sprintf("Disabling Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
+                !$this->dryRun ? ($gitlabUser = $gitlab->users()->block($gitlabUserId)) : $this->logger->warning("Operation skipped due to dry run.");
+                !$this->dryRun ? ($gitlabUser = $gitlab->users()->update($gitlabUserId, [
+                    "admin"             => false,
+                    "can_create_group"  => false,
+                    "external"          => true,
+                ])) : $this->logger->warning("Operation skipped due to dry run.");
+
+                $usersSync["extra"][$gitlabUserId] = $gitlabUserName;
             }
-
-            $this->logger->info(sprintf("Updating Gitlab user #%d \"%s\".", $gitlabUserId, $gitlabUserName));
-            $gitlabUser = null;
-
-            if (!isset($ldapUsers[$gitlabUserName]) || !is_array($ldapUsers[$gitlabUserName]) || count($ldapUsers[$gitlabUserName]) < 4) {
-                $this->logger->info(sprintf("Gitlab user \"%s\" has no LDAP details available.", $gitlabUserName));
-                continue;
-            }
-            $ldapUserDetails = $ldapUsers[$gitlabUserName];
-
-            !$this->dryRun ? ($gitlabUser = $gitlab->users()->update($gitlabUserId, [
-                // "username"          => $gitlabUserName,
-                // No point updating that. ^
-                // If the UID changes so will that bit of the DN anyway, so this can't be detected with a custom attribute containing the Gitlab user ID written back to user's LDAP object.
-                "reset_password"    => false,
-                "name"              => $ldapUserDetails["fullName"],
-                "extern_uid"        => $ldapUserDetails["dn"],
-                "provider"          => $gitlabConfig["ldapServerName"],
-                "email"             => $ldapUserDetails["email"],
-                "admin"             => $ldapUserDetails["isAdmin"],
-                "can_create_group"  => $ldapUserDetails["isAdmin"],
-                "skip_confirmation" => true,
-                "external"          => $ldapUserDetails["isExternal"],
-            ])) : $this->logger->warning("Operation skipped due to dry run.");
-
-            $usersSync["update"][$gitlabUserId] = $gitlabUserName;
 
             $this->gitlabApiCoolDown();
         }
 
         asort($usersSync["update"]);
         $this->logger->notice(sprintf("%d Gitlab user(s) updated.", $usersSync["updateNum"] = count($usersSync["update"])));
+        asort($usersSync["extra"]);
+        $this->logger->notice(sprintf("%d Gitlab user(s) disabled.", $usersSync["extraNum"] = count($usersSync["extra"])));
         // >> Handle users
 
         // << Handle groups
