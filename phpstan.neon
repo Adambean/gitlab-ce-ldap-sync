@@ -1,0 +1,4 @@
+parameters:
+    checkUninitializedProperties: true
+    checkImplicitMixed: true
+    treatPhpDocTypesAsCertain: false
