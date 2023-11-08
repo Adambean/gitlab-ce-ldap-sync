@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AdamReece\GitlabCeLdapSync;
 
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -164,7 +165,7 @@ use Cocur\Slugify\Slugify;
  *  wiki_access_level: ?string,
  * }
  */
-class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
+class LdapSyncCommand extends Command
 {
     /*
      * -------------------------------------------------------------------------
@@ -269,7 +270,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         ] as $ldapFunction) {
             if (!function_exists($ldapFunction)) {
                 $this->logger->critical(sprintf("PHP-LDAP function \"%s\" does not exist.", $ldapFunction));
-                return static::FAILURE;
+                return Command::FAILURE;
             }
         }
 
@@ -285,7 +286,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 $output->writeln(sprintf("It appears that you have not created a configuration yet.\nPlease duplicate \"%s\" as \"%s\", then modify it for your\nenvironment.", self::CONFIG_FILE_DIST_NAME, self::CONFIG_FILE_NAME));
             }
 
-            return static::FAILURE;
+            return Command::FAILURE;
         }
 
         $this->logger->notice("Loaded configuration.", ["file" => $this->configFilePathname, "config" => $config]);
@@ -301,7 +302,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 "%d configuration problem(s) need to be resolved.",
                 is_countable($configProblems) ? count($configProblems) : 0
             ));
-            return static::INVALID;
+            return Command::INVALID;
         }
 
         $this->logger->notice("Validated configuration.");
@@ -320,7 +321,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             $this->getLdapUsersAndGroups($config, $ldapUsers, $ldapUsersNum, $ldapGroups, $ldapGroupsNum);
         } catch (\Exception $e) {
             $this->logger->error(sprintf("LDAP failure: %s", $e->getMessage()), ["error" => $e]);
-            return static::FAILURE;
+            return Command::FAILURE;
         }
 
         $this->logger?->notice("Retrieved directory users and groups.");
@@ -331,12 +332,12 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
         /* Actually, we might still want to sync users and groups aren't any of one set yet.
         if (!is_array($ldapUsers) || $ldapUsersNum < 1) {
             $this->logger->error("Nothing to do: No users found in the directory.");
-            return static::INVALID;
+            return Command::INVALID;
         }
 
         if (!is_array($ldapGroups) || $ldapGroupsNum < 1) {
             $this->logger->error("Nothing to do: No groups found in the directory.");
-            return static::INVALID;
+            return Command::INVALID;
         }
          */
 
@@ -359,7 +360,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
                 $this->deployGitlabUsersAndGroups($config, $gitlabInstance, $gitlabConfig, $ldapUsers, $ldapUsersNum, $ldapGroups, $ldapGroupsNum);
             } catch (\Exception $e) {
                 $this->logger?->error(sprintf("Gitlab failure: %s", $e->getMessage()), ["error" => $e]);
-                return static::FAILURE;
+                return Command::FAILURE;
             }
         }
 
@@ -369,7 +370,7 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
 
         // Finished
         $output->writeln("Finished.");
-        return static::SUCCESS;
+        return Command::SUCCESS;
     }
 
 
@@ -911,7 +912,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             "attributes"    => $ldapUsersQueryAttributes,
         ]);
 
-        if (false === ($ldapUsersQuery = @ldap_search($ldap, $ldapUsersQueryBase, $config["ldap"]["queries"]["userFilter"], $ldapUsersQueryAttributes))) {
+        $ldapUsersQuery = @ldap_search($ldap, $ldapUsersQueryBase, strval($config["ldap"]["queries"]["userFilter"]), $ldapUsersQueryAttributes);
+        if (false === $ldapUsersQuery) {
             throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
@@ -1074,7 +1076,8 @@ class LdapSyncCommand extends \Symfony\Component\Console\Command\Command
             "attributes"    => $ldapGroupsQueryAttributes,
         ]);
 
-        if (false === ($ldapGroupsQuery = @ldap_search($ldap, $ldapGroupsQueryBase, $config["ldap"]["queries"]["groupFilter"], $ldapGroupsQueryAttributes))) {
+        $ldapGroupsQuery = @ldap_search($ldap, $ldapGroupsQueryBase, strval($config["ldap"]["queries"]["groupFilter"]), $ldapGroupsQueryAttributes);
+        if (false === $ldapGroupsQuery) {
             throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
