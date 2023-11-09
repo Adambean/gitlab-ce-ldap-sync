@@ -1353,7 +1353,7 @@ class LdapSyncCommand extends Command
                 }
 
                 if ($this->in_array_i($gitlabUserName, $this->getBuiltInUserNames())) {
-                    $this->logger?->info(sprintf("Gitlab built-in %s user will be ignored.", $gitlabUserName));
+                    $this->logger?->info(sprintf("User \"%s\" in built in ignore list.", $gitlabUserName));
                     continue;
                 }
 
@@ -1374,7 +1374,7 @@ class LdapSyncCommand extends Command
         $this->logger?->notice("Creating directory users of which don't exist in Gitlab...");
         foreach ($ldapUsers as $ldapUserName => $ldapUserDetails) {
             if ($this->in_array_i($ldapUserName, $this->getBuiltInUserNames())) {
-                $this->logger?->info(sprintf("Gitlab built-in %s user will be ignored.", $ldapUserName));
+                $this->logger?->info(sprintf("User \"%s\" in built in ignore list.", $ldapUserName));
                 continue;
             }
 
@@ -1471,7 +1471,7 @@ class LdapSyncCommand extends Command
             }
 
             if ($this->in_array_i($gitlabUserName, $this->getBuiltInUserNames())) {
-                $this->logger?->info(sprintf("Gitlab built-in %s user will be ignored.", $gitlabUserName));
+                $this->logger?->info(sprintf("User \"%s\" in built in ignore list.", $gitlabUserName));
                 continue;
             }
 
@@ -1616,14 +1616,9 @@ class LdapSyncCommand extends Command
                     continue;
                 }
 
-                if ("Root" == $gitlabGroupName) {
-                    $this->logger?->info("Gitlab built-in root group will be ignored.");
-                    continue; // The Gitlab root group should never be updated from LDAP.
-                }
-
-                if ("Users" == $gitlabGroupName) {
-                    $this->logger?->info("Gitlab built-in users group will be ignored.");
-                    continue; // The Gitlab users group should never be updated from LDAP.
+                if ($this->in_array_i($gitlabGroupName, $this->getBuiltInGroups())) {
+                    $this->logger?->info(sprintf("Group \"%s\" in built-in ignore list.", $gitlabGroupName));
+                    continue;
                 }
 
                 $this->logger?->info(sprintf("Found Gitlab group #%d \"%s\" [%s].", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
@@ -1642,14 +1637,9 @@ class LdapSyncCommand extends Command
         // Create directory groups of which don't exist in Gitlab
         $this->logger?->notice("Creating directory groups of which don't exist in Gitlab...");
         foreach ($ldapGroupsSafe as $ldapGroupName => $ldapGroupMembers) {
-            if ("Root" == $ldapGroupName) {
-                $this->logger?->info("Gitlab built-in root group will be ignored.");
-                continue; // The Gitlab root group should never be updated from LDAP.
-            }
-
-            if ("Users" == $ldapGroupName) {
-                $this->logger?->info("Gitlab built-in users group will be ignored.");
-                continue; // The Gitlab users group should never be updated from LDAP.
+            if ($this->in_array_i($ldapGroupName, $this->getBuiltInGroups())) {
+                $this->logger?->info(sprintf("Group \"%s\" in built-in ignore list.", $ldapGroupName));
+                continue;
             }
 
             if ($this->in_array_i($ldapGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
@@ -1686,14 +1676,9 @@ class LdapSyncCommand extends Command
         // Delete Gitlab groups of which don't exist in directory
         $this->logger?->notice("Deleting Gitlab groups of which don't exist in directory...");
         foreach ($groupsSync["found"] as $gitlabGroupId => $gitlabGroupName) {
-            if ("Root" == $gitlabGroupName) {
-                $this->logger?->info("Gitlab built-in root group will be ignored.");
-                continue; // The Gitlab root group should never be updated from LDAP.
-            }
-
-            if ("Users" == $gitlabGroupName) {
-                $this->logger?->info("Gitlab built-in users group will be ignored.");
-                continue; // The Gitlab users group should never be updated from LDAP.
+            if ($this->in_array_i($gitlabGroupName, $this->getBuiltInGroups())) {
+                $this->logger?->info(sprintf("Group \"%s\" in built-in ignore list.", $gitlabGroupName));
+                continue;
             }
 
             if ($this->in_array_i($gitlabGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
@@ -1743,14 +1728,9 @@ class LdapSyncCommand extends Command
                 continue;
             }
 
-            if ("Root" == $gitlabGroupName) {
-                $this->logger?->info("Gitlab built-in root group will be ignored.");
-                continue; // The Gitlab root group should never be updated from LDAP.
-            }
-
-            if ("Users" == $gitlabGroupName) {
-                $this->logger?->info("Gitlab built-in users group will be ignored.");
-                continue; // The Gitlab users group should never be updated from LDAP.
+            if ($this->in_array_i($gitlabGroupName, $this->getBuiltInGroups())) {
+                $this->logger?->info(sprintf("Group \"%s\" in built-in ignore list.", $gitlabGroupName));
+                continue;
             }
 
             if ($this->in_array_i($gitlabGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
@@ -1800,14 +1780,9 @@ class LdapSyncCommand extends Command
 
         $this->logger?->notice("Synchronising Gitlab group members with directory group members...");
         foreach ($groupsToSyncMembership as $gitlabGroupId => $gitlabGroupName) {
-            if ("Root" == $gitlabGroupName) {
-                $this->logger?->info("Gitlab built-in root group will be ignored.");
-                continue; // The Gitlab root group should never be updated from LDAP.
-            }
-
-            if ("Users" == $gitlabGroupName) {
-                $this->logger?->info("Gitlab built-in users group will be ignored.");
-                continue; // The Gitlab users group should never be updated from LDAP.
+            if ($this->in_array_i($gitlabGroupName, $this->getBuiltInGroups())) {
+                $this->logger?->info(sprintf("Group \"%s\" in built-in ignore list.", $gitlabGroupName));
+                continue;
             }
 
             if ($this->in_array_i($gitlabGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"])) {
@@ -1892,7 +1867,7 @@ class LdapSyncCommand extends Command
                     }
 
                     if ($this->in_array_i($gitlabUserName, $this->getBuiltInUserNames())) {
-                        $this->logger?->info(sprintf("Gitlab built-in %s user will be ignored.", $gitlabUserName));
+                        $this->logger?->info(sprintf("User \"%s\" in built in ignore list.", $gitlabUserName));
                         continue;
                     }
 
@@ -2051,11 +2026,20 @@ class LdapSyncCommand extends Command
 
     /**
      * Get a list of built-in user names, of which should be ignored by this application.
-     * @return array<string>
+     * @return string[]
      */
-    private function getBuiltInUserNames()
+    private function getBuiltInUserNames(): array
     {
         return ["root", "ghost", "support-bot", "alert-bot"];
+    }
+
+    /**
+     * Get a list of built-in group names, of which should be ignored by this application.
+     * @return string[]
+     */
+    private function getBuiltInGroups(): array
+    {
+        return ["root", "lost-and-found", "Users"];
     }
 
     /**
