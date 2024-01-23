@@ -338,6 +338,16 @@ groupNamesOfExternal:
 
 Default: *null*
 
+##### groupNameSeparator *(string|null)*
+
+Specify a separator for group names.
+
+By default LDAP group names are sanitized before creating the corresponding Gitlab group from them. The default logic is to remove all "unnice" characters. But if you want your group name in Gitlab to be the exact same as in LDAP for example then this separator can help with it.
+
+E.g. `cn=example-group,ou=groups,dc=example,dc=com` -> Default option is to remove the dash from `example-group` so it would be `example group`. By specifying the separator as `-` it would still remain `example-group`.
+
+Default: " "
+
 #### instances *(array)*
 
 Declare one or more Gitlab instances to sync with. Each array key represents the instance name, which can be used later on to only sync with a particular instance (out of multiple) when running this tool.
