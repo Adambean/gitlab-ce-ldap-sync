@@ -793,7 +793,7 @@ class LdapSyncCommand extends Command
                 if (!isset($config["gitlab"]["options"]["groupNameSeparator"])) {
                     $addProblem("warning", "gitlab->options->groupNameSeparator missing. (Assuming ' '.)");
                     $config["gitlab"]["options"]["groupNameSeparator"] = " ";
-                } elseif (!($config["gitlab"]["options"]["groupnameseparator"] = trim($config["gitlab"]["options"]["groupnameseparator"]))) {
+                } elseif (!($config["gitlab"]["options"]["groupNameSeparator"] = trim($config["gitlab"]["options"]["groupNameSeparator"]))) {
                     $addProblem("warning", "gitlab->options->groupNameSeparator not specified. (Assuming ' '.)");
                     $config["gitlab"]["options"]["groupNameSeparator"] = " ";
                 }
