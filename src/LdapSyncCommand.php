@@ -1946,6 +1946,11 @@ class LdapSyncCommand extends Command
                     continue;
                 }
 
+                if ($this->in_array_i($gitlabUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
+                    $this->logger?->info(sprintf("User \"%s\" in ignore list.", $gitlabUserName));
+                    continue;
+                }
+
                 $this->logger?->info(sprintf("Deleting user #%d \"%s\" from group #%d \"%s\" [%s].", $gitlabUserId, $gitlabUserName, $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                 $gitlabGroupMember = null;
 
