@@ -789,6 +789,14 @@ class LdapSyncCommand extends Command
                         }
                     }
                 }
+
+                if (!isset($config["gitlab"]["options"]["groupNameSeparator"])) {
+                    $addProblem("warning", "gitlab->options->groupNameSeparator missing. (Assuming default ' '.)");
+                    $config["gitlab"]["options"]["groupNameSeparator"] = " ";
+                } elseif (!($config["gitlab"]["options"]["groupnameseparator"] = trim($config["gitlab"]["options"]["groupnameseparator"])))
+                    $addProblem("warning", "gitlab->options->groupNameSeparator not specified. (Assuming ' '.)");
+                    $config["gitlab"]["options"]["groupNameSeparator"] = " ";
+                }
             }
             // >> Gitlab options
 
@@ -1264,7 +1272,7 @@ class LdapSyncCommand extends Command
 
         $slugifyGitlabName = new Slugify([
             "regexp"        => "/([^A-Za-z0-9]|-_\. )+/",
-            "separator"     => " ",
+            "separator"     => $config["gitlab"]["options"]["groupNameSeparator"],
             "lowercase"     => false,
             "trim"          => true,
         ]);
