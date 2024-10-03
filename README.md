@@ -23,7 +23,7 @@ Features implemented:
 Not implemented:
 
 * Sub-group handling
-* SSH key importing *(in progress)*
+* ~~SSH key importing *(in progress)*~~: No longer required: Gitlab has a [native configuration option](https://docs.gitlab.com/ee/administration/auth/ldap/#ldap-sync-configuration-settings) "sync_ssh_keys" to specify a user attribute to synchronise keys from.
 
 If in doubt use the dry run `-d` option to prevent writing to Gitlab first, combined with `-vv` to see exactly what would happen.
 
