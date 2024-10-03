@@ -80,6 +80,7 @@ use Cocur\Slugify\Slugify;
  *  created_at: string,
  *  is_admin: bool,
  *  bio: string,
+ *  bot: bool,
  *  location: ?string,
  *  public_email: string,
  *  skype: string,
@@ -1349,6 +1350,11 @@ class LdapSyncCommand extends Command
 
                 if (!($gitlabUserName = trim($gitlabUser["username"]))) {
                     $this->logger?->error(sprintf("User #%d: Empty user name.", $n));
+                    continue;
+                }
+
+                if (true === $gitlabUser["bot"]) {
+                    $this->logger?->info(sprintf("User \"%s\" is a bot.", $gitlabUserName));
                     continue;
                 }
 
