@@ -48,7 +48,7 @@ Requirements for running this tool from a management station:
 
 Either checkout this project or download it in ZIP form and extract it somewhere safe. The configuration will later contain an LDAP password and Gitlab API secret keys, so do put some protection in place to ensure only you can access it.
 
-After this you will need to install PHP components delivered via [Composer](https://getcomposer.org/). To do this open a terminal and change the working directory to this tool's location.
+After this you will need to install PHP components delivered via [Composer](https://getcomposer.org/). To do this open a terminal and change the working directory to this tool's location. (Or add the `-d`/`--working-dir=` option to run from another working directory.)
 
 * If you have Composer installed as a system-wide application (e.g. via `apt-get` or `yum`/`dnf`) use command `composer install`.
 * If you have Composer manually downloaded residing as `composer.phar` alongside this tool use command `php composer.phar install`.
