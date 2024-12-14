@@ -1499,7 +1499,7 @@ class LdapSyncCommand extends Command
                 continue;
             }
 
-            if ([] !== $usersSync["new"][$gitlabUserId]) {
+            if ("" !== $usersSync["new"][$gitlabUserId]) {
                 continue;
             }
 
@@ -1772,7 +1772,7 @@ class LdapSyncCommand extends Command
         // Update groups of which were already in both Gitlab and the directory
         $this->logger?->notice("Updating groups of which were already in both Gitlab and the directory...");
         foreach ($groupsSync["found"] as $gitlabGroupId => $gitlabGroupName) {
-            if ([] !== $groupsSync["new"][$gitlabGroupId] || [] !== $groupsSync["extra"][$gitlabGroupId]) {
+            if ("" !== $groupsSync["new"][$gitlabGroupId] || "" !== $groupsSync["extra"][$gitlabGroupId]) {
                 continue;
             }
 
