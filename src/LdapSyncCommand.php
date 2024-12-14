@@ -303,7 +303,7 @@ class LdapSyncCommand extends Command
         if (!$this->validateConfig($config, $configProblems)) {
             $this->logger->error(sprintf(
                 "%d configuration problem(s) need to be resolved.",
-                count($configProblems)
+                count($configProblems["error"])
             ));
             return Command::INVALID;
         }
@@ -832,7 +832,7 @@ class LdapSyncCommand extends Command
         }
         // >> Gitlab
 
-        return ([] !== $problems["error"]);
+        return ([] === $problems["error"]);
     }
 
     /**
