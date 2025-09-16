@@ -1296,14 +1296,14 @@ class LdapSyncCommand extends Command
         $this->output?->writeln(sprintf("Deploying users and groups to Gitlab instance \"%s\"...", $gitlabInstance));
 
         $slugifyGitlabName = new Slugify([
-            "regexp"        => "/([^A-Za-z0-9]|-_\. )+/",
+            "regexp"        => "/([^A-Za-z0-9_\.\(\)\- ])+/",
             "separator"     => " ",
             "lowercase"     => false,
             "trim"          => true,
         ]);
 
         $slugifyGitlabPath = new Slugify([
-            "regexp"        => "/([^A-Za-z0-9]|-_\.)+/",
+            "regexp"        => "/([^A-Za-z0-9_\.\-])+/",
             "separator"     => "-",
             "lowercase"     => true,
             "trim"          => true,
