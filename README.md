@@ -38,7 +38,7 @@ These instructions will get you a copy of the project up and running on your loc
 Requirements for running this tool from a management station:
 
 * Any system that can run PHP-CLI will do. (Even Windows.)
-* [PHP](https://www.php.net) version 8.1 or later: Available to most Linux distributions via `apt-get` or `yum`/`dnf`. You don't need anything web related, but you will need the command line interface.
+* [PHP](https://www.php.net) version 8.2 or later: Available to most Linux distributions via `apt-get` or `yum`/`dnf`. You don't need anything web related, but you will need the command line interface.
 * [PHP's LDAP functions](http://php.net/manual/en/book.ldap.php): Usually installed with PHP as standard, but the LDAP module/functions may not be enabled by default.
 * [Composer](https://getcomposer.org/): Available to most Linux distributions via `apt-get` or `yum`/`dnf`, or manually download it as `composer.phar` alongside this tool.
 * LDAP instance: Used for Gitlab's authentication. It can (likely) be Microsoft Active Directory, OpenLDAP, 389-DS (including FreeIPA), and any other LDAP system, though **most of my testing is with 389-DS (without FreeIPA)**.
