@@ -6,18 +6,18 @@
         "php": ">=8.1",
         "cocur/slugify": "^4.6.0",
         "http-interop/http-factory-guzzle": "^1.2",
-        "m4tthumphrey/php-gitlab-api": "^11.14",
-        "monolog/monolog": "^3.8.1",
+        "m4tthumphrey/php-gitlab-api": "^12.0.0",
+        "monolog/monolog": "^3.9.0",
         "php-http/guzzle6-adapter": "^2.0.2",
-        "symfony/console": "v6.4.15",
-        "symfony/polyfill-php82": "^1.31.0",
-        "symfony/polyfill-php83": "^1.31.0",
-        "symfony/polyfill-php84": "^1.31.0",
-        "symfony/yaml": "^6.4.13"
+        "symfony/console": "^6.4.25",
+        "symfony/polyfill-php82": "^1.33.0",
+        "symfony/polyfill-php83": "^1.33.0",
+        "symfony/polyfill-php84": "^1.33.0",
+        "symfony/yaml": "^6.4.25"
     },
     "require-dev": {
-        "phpstan/phpstan": "^2.0.3",
-        "phpstan/phpstan-symfony": "^2.0.0"
+        "phpstan/phpstan": "^2.1.28",
+        "phpstan/phpstan-symfony": "^2.0.8"
     },
     "autoload": {
         "psr-4": {

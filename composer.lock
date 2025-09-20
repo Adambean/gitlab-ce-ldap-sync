@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c9b8ca10416d75cfd5fd98d48b792aea",
+    "content-hash": "01367b458c5864b63cfb2c946fb8afc6",
     "packages": [
         {
             "name": "clue/stream-filter",
@@ -505,38 +505,36 @@
         },
         {
             "name": "m4tthumphrey/php-gitlab-api",
-            "version": "11.14.0",
+            "version": "12.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/GitLabPHP/Client.git",
-                "reference": "6b805882e1478873cc89ee62d2decf74eee2d5f2"
+                "reference": "362450ff932296bc15796f97da8cf57941650037"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/GitLabPHP/Client/zipball/6b805882e1478873cc89ee62d2decf74eee2d5f2",
-                "reference": "6b805882e1478873cc89ee62d2decf74eee2d5f2",
+                "url": "https://api.github.com/repos/GitLabPHP/Client/zipball/362450ff932296bc15796f97da8cf57941650037",
+                "reference": "362450ff932296bc15796f97da8cf57941650037",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
                 "ext-xml": "*",
-                "php": "^7.4.15 || ^8.0.2",
-                "php-http/cache-plugin": "^1.8.1 || ^2.0",
-                "php-http/client-common": "^2.7.1",
-                "php-http/discovery": "^1.19.2",
-                "php-http/httplug": "^2.4",
-                "php-http/multipart-stream-builder": "^1.3",
-                "psr/cache": "^1.0 || ^2.0 || ^3.0",
+                "php": "^8.1",
+                "php-http/cache-plugin": "^2.0.1",
+                "php-http/client-common": "^2.7.2",
+                "php-http/discovery": "^1.20.0",
+                "php-http/httplug": "^2.4.1",
+                "php-http/multipart-stream-builder": "^1.4.2",
+                "psr/cache": "^2.0 || ^3.0",
                 "psr/http-client-implementation": "^1.0",
                 "psr/http-factory-implementation": "^1.0",
                 "psr/http-message": "^1.1 || ^2.0",
-                "symfony/options-resolver": "^4.4 || ^5.0 || ^6.0 || ^7.0",
-                "symfony/polyfill-php80": "^1.26"
+                "symfony/options-resolver": "^5.4 || ^6.0 || ^7.0"
             },
             "require-dev": {
                 "bamarni/composer-bin-plugin": "^1.8.2",
-                "guzzlehttp/guzzle": "^7.8",
-                "http-interop/http-factory-guzzle": "^1.2"
+                "guzzlehttp/guzzle": "^7.9.2"
             },
             "type": "library",
             "extra": {
@@ -583,7 +581,7 @@
             ],
             "support": {
                 "issues": "https://github.com/GitLabPHP/Client/issues",
-                "source": "https://github.com/GitLabPHP/Client/tree/11.14.0"
+                "source": "https://github.com/GitLabPHP/Client/tree/12.0.0"
             },
             "funding": [
                 {
@@ -591,7 +589,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-03-17T21:35:56+00:00"
+            "time": "2025-02-23T20:36:49+00:00"
         },
         {
             "name": "monolog/monolog",
@@ -1559,16 +1557,16 @@
         },
         {
             "name": "symfony/console",
-            "version": "v6.4.15",
+            "version": "v6.4.25",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/console.git",
-                "reference": "f1fc6f47283e27336e7cebb9e8946c8de7bff9bd"
+                "reference": "273fd29ff30ba0a88ca5fb83f7cf1ab69306adae"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/console/zipball/f1fc6f47283e27336e7cebb9e8946c8de7bff9bd",
-                "reference": "f1fc6f47283e27336e7cebb9e8946c8de7bff9bd",
+                "url": "https://api.github.com/repos/symfony/console/zipball/273fd29ff30ba0a88ca5fb83f7cf1ab69306adae",
+                "reference": "273fd29ff30ba0a88ca5fb83f7cf1ab69306adae",
                 "shasum": ""
             },
             "require": {
@@ -1633,7 +1631,7 @@
                 "terminal"
             ],
             "support": {
-                "source": "https://github.com/symfony/console/tree/v6.4.15"
+                "source": "https://github.com/symfony/console/tree/v6.4.25"
             },
             "funding": [
                 {
@@ -1645,11 +1643,15 @@
                     "type": "github"
                 },
                 {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
                     "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
                     "type": "tidelift"
                 }
             ],
-            "time": "2024-11-06T14:19:14+00:00"
+            "time": "2025-08-22T10:21:53+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",
