@@ -174,13 +174,13 @@ class LdapSyncCommand extends Command
      */
 
     /** @var string User's configuration file name. */
-    const CONFIG_FILE_NAME = "config.yml";
+    public const CONFIG_FILE_NAME = "config.yml";
 
     /** @var string Distributed configuration file name. */
-    const CONFIG_FILE_DIST_NAME = "config.yml.dist";
+    public const CONFIG_FILE_DIST_NAME = "config.yml.dist";
 
-    /** @var int Wait this long (in microseconds) between Gitlab API calls to avoid flooding. */
-    const API_COOL_DOWN_USECONDS = 100000;
+    /** @var non-negative-int Wait this long (in microseconds) between Gitlab API calls to avoid flooding. */
+    public const API_COOL_DOWN_USECONDS = 100000;
 
 
 
