@@ -7,5 +7,13 @@
 	"settings": {
 		"files.eol": "\n",
 		"files.trimTrailingWhitespace": true
+	},
+	"extensions": {
+		"recommendations": [
+			"xdebug.php-debug",
+			"swordev.phpstan",
+			"bmewburn.vscode-intelephense-client",
+			"neilbrayfield.php-docblocker"
+		]
 	}
 }

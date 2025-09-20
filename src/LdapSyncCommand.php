@@ -221,6 +221,7 @@ class LdapSyncCommand extends Command
 
     /**
      * Configures the current command.
+     *
      * @return void
      */
     public function configure(): void
@@ -236,9 +237,11 @@ class LdapSyncCommand extends Command
 
     /**
      * Executes the current command.
-     * @param  InputInterface  $input  Input interface
-     * @param  OutputInterface $output Output interface
-     * @return int|null                Error code, or null/zero for success
+     *
+     * @param InputInterface  $input  Input interface
+     * @param OutputInterface $output Output interface
+     *
+     * @return int|null Error code, or null/zero for success
      */
     public function execute(InputInterface $input, OutputInterface $output): ?int
     {
@@ -300,7 +303,7 @@ class LdapSyncCommand extends Command
         if (!$this->validateConfig($config, $configProblems)) {
             $this->logger->error(sprintf(
                 "%d configuration problem(s) need to be resolved.",
-                is_countable($configProblems) ? count($configProblems) : 0
+                count($configProblems["error"])
             ));
             return Command::INVALID;
         }
@@ -357,7 +360,15 @@ class LdapSyncCommand extends Command
             }
 
             try {
-                $this->deployGitlabUsersAndGroups($config, $gitlabInstance, $gitlabConfig, $ldapUsers, $ldapUsersNum, $ldapGroups, $ldapGroupsNum);
+                $this->deployGitlabUsersAndGroups(
+                    $config,
+                    $gitlabInstance,
+                    $gitlabConfig,
+                    $ldapUsers,
+                    $ldapUsersNum,
+                    $ldapGroups,
+                    $ldapGroupsNum
+                );
             } catch (\Exception $e) {
                 $this->logger?->error(sprintf("Gitlab failure: %s", $e->getMessage()), ["error" => $e]);
                 return Command::FAILURE;
@@ -383,8 +394,10 @@ class LdapSyncCommand extends Command
 
     /**
      * Load configuration.
-     * @param  string           $file File
-     * @return ConfigArray|null       Configuration, or null if failed
+     *
+     * @param string $file File pathname
+     *
+     * @return ConfigArray|null Configuration, or null if failed
      */
     private function loadConfig(string $file): ?array
     {
@@ -422,7 +435,7 @@ class LdapSyncCommand extends Command
             return null;
         }
 
-        if (empty($yaml)) {
+        if ([] === $yaml) {
             $this->logger?->critical("Configuration empty.");
             return null;
         }
@@ -433,16 +446,14 @@ class LdapSyncCommand extends Command
 
     /**
      * Validate configuration.
-     * @param  ConfigArray                  $config   Configuration (this will be modified for type strictness and trimming)
-     * @param  array<string, string[]>|null $problems Optional output of problems indexed by type
-     * @return bool                                   True if valid, false if invalid
+     *
+     * @param ConfigArray             $config   Configuration (this will be modified for type strictness and trimming)
+     * @param array<string, string[]> $problems Output of problems indexed by type
+     *
+     * @return bool True if valid, false if invalid
      */
-    private function validateConfig(array &$config, array &$problems = null): bool
+    private function validateConfig(array &$config, array &$problems): bool
     {
-        if (!is_array($problems)) {
-            $problems = [];
-        }
-
         $problems = [
             "warning"   => [],
             "error"     => [],
@@ -450,9 +461,12 @@ class LdapSyncCommand extends Command
 
         /**
          * @var callable $addProblem Add a problem.
-         * @param  string                       $type     Problem type (error or warning)
-         * @param  string                       $message  Problem description
-         * @uses   array<string, string[]>|null $problems Optional output of problems indexed by type
+         *
+         * @param string $type    Problem type (error or warning)
+         * @param string $message Problem description
+         *
+         * @uses array<string, string[]> $problems Output of problems indexed by type
+         *
          * @return void
          */
         $addProblem = function (string $type, string $message) use (&$problems): void {
@@ -553,7 +567,7 @@ class LdapSyncCommand extends Command
                 } else {
                     if (!isset($config["ldap"]["server"]["bindPassword"])) {
                         $addProblem("warning", "ldap->server->bindPassword missing. (Must be specified for non-anonymous access.)");
-                    } elseif (!strlen($config["ldap"]["server"]["bindPassword"])) {
+                    } elseif ("" === $config["ldap"]["server"]["bindPassword"]) {
                         $addProblem("warning", "ldap->server->bindPassword not specified. (Must be specified for non-anonymous access.)");
                     }
                 }
@@ -578,8 +592,10 @@ class LdapSyncCommand extends Command
                 }
 
                 if (
-                    !empty($config["ldap"]["queries"]["baseDn"]) &&
-                    !empty($config["ldap"]["queries"]["userDn"]) &&
+                    is_string($config["ldap"]["queries"]["baseDn"]) &&
+                    "" !== $config["ldap"]["queries"]["baseDn"] &&
+                    is_string($config["ldap"]["queries"]["userDn"]) &&
+                    "" !== $config["ldap"]["queries"]["userDn"] &&
                     strripos($config["ldap"]["queries"]["userDn"], $config["ldap"]["queries"]["baseDn"]) === (strlen($config["ldap"]["queries"]["userDn"]) - strlen($config["ldap"]["queries"]["baseDn"]))
                 ) {
                     $addProblem("warning", "ldap->queries->userDn wrongly ends with ldap->queries->baseDn, this could cause user objects to not be found.");
@@ -625,8 +641,10 @@ class LdapSyncCommand extends Command
                 }
 
                 if (
-                    !empty($config["ldap"]["queries"]["baseDn"]) &&
-                    !empty($config["ldap"]["queries"]["groupDn"]) &&
+                    is_string($config["ldap"]["queries"]["baseDn"]) &&
+                    "" !== $config["ldap"]["queries"]["baseDn"] &&
+                    is_string($config["ldap"]["queries"]["groupDn"]) &&
+                    "" !== $config["ldap"]["queries"]["groupDn"] &&
                     strripos($config["ldap"]["queries"]["groupDn"], $config["ldap"]["queries"]["baseDn"]) === (strlen($config["ldap"]["queries"]["groupDn"]) - strlen($config["ldap"]["queries"]["baseDn"]))
                 ) {
                     $addProblem("warning", "ldap->queries->groupDn wrongly ends with ldap->queries->baseDn, this could cause user objects to not be found.");
@@ -680,7 +698,7 @@ class LdapSyncCommand extends Command
                     $config["gitlab"]["options"]["userNamesToIgnore"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["userNamesToIgnore"])) {
                     $addProblem("error", "gitlab->options->userNamesToIgnore is not an array.");
-                } elseif (!empty($config["gitlab"]["options"]["userNamesToIgnore"])) {
+                } elseif ([] !== $config["gitlab"]["options"]["userNamesToIgnore"]) {
                     foreach ($config["gitlab"]["options"]["userNamesToIgnore"] as $i => $userName) {
                         if (!is_string($userName)) {
                             $addProblem("error", sprintf("gitlab->options->userNamesToIgnore[%d] is not a string.", $i));
@@ -702,7 +720,7 @@ class LdapSyncCommand extends Command
                     $config["gitlab"]["options"]["groupNamesToIgnore"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["groupNamesToIgnore"])) {
                     $addProblem("error", "gitlab->options->groupNamesToIgnore is not an array.");
-                } elseif (!empty($config["gitlab"]["options"]["groupNamesToIgnore"])) {
+                } elseif ([] !== $config["gitlab"]["options"]["groupNamesToIgnore"]) {
                     foreach ($config["gitlab"]["options"]["groupNamesToIgnore"] as $i => $groupName) {
                         if (!is_string($groupName)) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesToIgnore[%d] is not a string.", $i));
@@ -754,7 +772,7 @@ class LdapSyncCommand extends Command
                     $config["gitlab"]["options"]["groupNamesOfAdministrators"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
                     $addProblem("error", "gitlab->options->groupNamesOfAdministrators is not an array.");
-                } elseif (!empty($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
+                } elseif ([] !== $config["gitlab"]["options"]["groupNamesOfAdministrators"]) {
                     foreach ($config["gitlab"]["options"]["groupNamesOfAdministrators"] as $i => $groupName) {
                         if (!is_string($groupName)) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesOfAdministrators[%d] is not a string.", $i));
@@ -776,7 +794,7 @@ class LdapSyncCommand extends Command
                     $config["gitlab"]["options"]["groupNamesOfExternal"] = [];
                 } elseif (!is_array($config["gitlab"]["options"]["groupNamesOfExternal"])) {
                     $addProblem("error", "gitlab->options->groupNamesOfExternal is not an array.");
-                } elseif (!empty($config["gitlab"]["options"]["groupNamesOfExternal"])) {
+                } elseif ([] !== $config["gitlab"]["options"]["groupNamesOfExternal"]) {
                     foreach ($config["gitlab"]["options"]["groupNamesOfExternal"] as $i => $groupName) {
                         if (!is_string($groupName)) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesOfExternal[%d] is not a string.", $i));
@@ -814,17 +832,19 @@ class LdapSyncCommand extends Command
         }
         // >> Gitlab
 
-        return (is_array($problems) && isset($problems["error"]) && is_array($problems["error"]) && empty($problems["error"]));
+        return ([] === $problems["error"]);
     }
 
     /**
      * Get users and groups from LDAP.
-     * @param  ConfigArray                         $config    Validated configuration
-     * @param  array<string, array<string, mixed>> $users     Users output
-     * @param  int                                 $usersNum  Users count output
-     * @param  array<string, array<string, mixed>> $groups    Groups output
-     * @param  int                                 $groupsNum Groups count output
-     * @return void                                           Success if returned, exception thrown on error
+     *
+     * @param ConfigArray                         $config    Validated configuration
+     * @param array<string, array<string, mixed>> $users     Users output
+     * @param int                                 $usersNum  Users count output
+     * @param array<string, array<string, mixed>> $groups    Groups output
+     * @param int                                 $groupsNum Groups count output
+     *
+     * @return void Success if returned, exception thrown on error
      */
     private function getLdapUsersAndGroups(array $config, array &$users, int &$usersNum, array &$groups, int &$groupsNum): void
     {
@@ -885,7 +905,11 @@ class LdapSyncCommand extends Command
         }
 
         $this->logger?->debug("LDAP: Binding", ["dn" => $config["ldap"]["server"]["bindDn"]]);
-        if (false === @ldap_bind($ldap, $config["ldap"]["server"]["bindDn"], $config["ldap"]["server"]["bindPassword"])) {
+        if (false === @ldap_bind(
+            $ldap,
+            $config["ldap"]["server"]["bindDn"],
+            $config["ldap"]["server"]["bindPassword"]
+        )) {
             throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
@@ -895,7 +919,7 @@ class LdapSyncCommand extends Command
         $ldapUsersQueryBase = sprintf(
             "%s%s%s",
             $config["ldap"]["queries"]["userDn"],
-            null !== $config["ldap"]["queries"]["userDn"] && strlen($config["ldap"]["queries"]["userDn"]) >= 1 ? "," : "",
+            null !== $config["ldap"]["queries"]["userDn"] && "" !== $config["ldap"]["queries"]["userDn"] ? "," : "",
             $config["ldap"]["queries"]["baseDn"]
         );
 
@@ -912,8 +936,13 @@ class LdapSyncCommand extends Command
             "attributes"    => $ldapUsersQueryAttributes,
         ]);
 
-        $ldapUsersQuery = @ldap_search($ldap, $ldapUsersQueryBase, strval($config["ldap"]["queries"]["userFilter"]), $ldapUsersQueryAttributes);
-        if (false === $ldapUsersQuery) {
+        $ldapUsersQuery = @ldap_search(
+            $ldap,
+            $ldapUsersQueryBase,
+            strval($config["ldap"]["queries"]["userFilter"]),
+            $ldapUsersQueryAttributes
+        );
+        if (false === $ldapUsersQuery || !($ldapUsersQuery instanceof \LDAP\Result)) {
             throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
@@ -934,7 +963,8 @@ class LdapSyncCommand extends Command
             : "mail"
         ;
 
-        if (is_array($ldapUsers = @ldap_get_entries($ldap, $ldapUsersQuery)) && is_iterable($ldapUsers)) {
+        $ldapUsers = @ldap_get_entries($ldap, $ldapUsersQuery);
+        if (is_array($ldapUsers)) {
             if (($ldapUsersNum = count($ldapUsers)) >= 1) {
                 $this->logger?->notice(sprintf("%d directory user(s) found.", $ldapUsersNum));
 
@@ -1061,7 +1091,7 @@ class LdapSyncCommand extends Command
         $ldapGroupsQueryBase = sprintf(
             "%s%s%s",
             $config["ldap"]["queries"]["groupDn"],
-            is_string($config["ldap"]["queries"]["groupDn"]) && strlen($config["ldap"]["queries"]["groupDn"]) >= 1 ? "," : "",
+            is_string($config["ldap"]["queries"]["groupDn"]) && "" !== $config["ldap"]["queries"]["groupDn"] ? "," : "",
             $config["ldap"]["queries"]["baseDn"]
         );
 
@@ -1077,7 +1107,7 @@ class LdapSyncCommand extends Command
         ]);
 
         $ldapGroupsQuery = @ldap_search($ldap, $ldapGroupsQueryBase, strval($config["ldap"]["queries"]["groupFilter"]), $ldapGroupsQueryAttributes);
-        if (false === $ldapGroupsQuery) {
+        if (false === $ldapGroupsQuery || !($ldapGroupsQuery instanceof \LDAP\Result)) {
             throw new \RuntimeException(sprintf("%s. (Code %d)", @ldap_error($ldap), @ldap_errno($ldap)));
         }
 
@@ -1090,7 +1120,8 @@ class LdapSyncCommand extends Command
             : "memberUid"
         ;
 
-        if (is_array($ldapGroups = @ldap_get_entries($ldap, $ldapGroupsQuery)) && is_iterable($ldapGroups)) {
+        $ldapGroups = @ldap_get_entries($ldap, $ldapGroupsQuery);
+        if (is_array($ldapGroups)) {
             if (($ldapGroupsNum = count($ldapGroups)) >= 1) {
                 $this->logger?->notice(sprintf("%d directory group(s) found.", $ldapGroupsNum));
 
@@ -1249,14 +1280,16 @@ class LdapSyncCommand extends Command
 
     /**
      * Deploy users and groups to a Gitlab instance.
-     * @param  ConfigArray                         $config         Validated configuration
-     * @param  string                              $gitlabInstance Gitlab instance name
-     * @param  ConfigGitlabArray                   $gitlabConfig   Gitlab instance configuration
-     * @param  array<string, array<string, mixed>> $ldapUsers      LDAP users
-     * @param  int                                 $ldapUsersNum   LDAP users count
-     * @param  array<string, array<string, mixed>> $ldapGroups     LDAP groups
-     * @param  int                                 $ldapGroupsNum  LDAP groups count
-     * @return void                                                Success if returned, exception thrown on error
+     *
+     * @param ConfigArray                         $config         Validated configuration
+     * @param string                              $gitlabInstance Gitlab instance name
+     * @param ConfigGitlabArray                   $gitlabConfig   Gitlab instance configuration
+     * @param array<string, array<string, mixed>> $ldapUsers      LDAP users
+     * @param int                                 $ldapUsersNum   LDAP users count
+     * @param array<string, array<string, mixed>> $ldapGroups     LDAP groups
+     * @param int                                 $ldapGroupsNum  LDAP groups count
+     *
+     * @return void Success if returned, exception thrown on error
      */
     private function deployGitlabUsersAndGroups(array $config, string $gitlabInstance, array $gitlabConfig, array $ldapUsers, int $ldapUsersNum, array $ldapGroups, int $ldapGroupsNum): void
     {
@@ -1321,7 +1354,7 @@ class LdapSyncCommand extends Command
         $this->logger?->notice("Finding all existing Gitlab users...");
         $p = 0;
 
-        while (is_array($gitlabUsers = $gitlab->users()->all(["page" => ++$p, "per_page" => 100])) && !empty($gitlabUsers)) {
+        while (is_array($gitlabUsers = $gitlab->users()->all(["page" => ++$p, "per_page" => 100])) && [] !== $gitlabUsers) {
             /** @var array<int, GitlabUserArray> $gitlabUsers */
             foreach ($gitlabUsers as $i => $gitlabUser) {
                 $n = $i + 1;
@@ -1456,7 +1489,7 @@ class LdapSyncCommand extends Command
         $this->logger?->notice("Synchronising users of between Gitlab and the directory...");
         foreach ($usersSync["found"] as $gitlabUserId => $gitlabUserName) {
             $gitlabUser = $gitlab->users()->show($gitlabUserId);
-            if (!is_array($gitlabUser) || empty($gitlabUser)) {
+            if (!is_array($gitlabUser) || [] === $gitlabUser) {
                 $this->logger?->error(sprintf("Gitlab user #%d \"%s\" could not be retrieved.", $gitlabUserId, $gitlabUserName));
                 continue;
             }
@@ -1466,7 +1499,7 @@ class LdapSyncCommand extends Command
                 continue;
             }
 
-            if (!empty($usersSync["new"][$gitlabUserId])) {
+            if (isset($usersSync["new"][$gitlabUserId]) && "" !== $usersSync["new"][$gitlabUserId]) {
                 continue;
             }
 
@@ -1480,7 +1513,7 @@ class LdapSyncCommand extends Command
                 continue;
             }
 
-            if (isset($ldapUsers[$gitlabUserName]) && is_array($ldapUsers[$gitlabUserName]) && !empty($ldapUsers[$gitlabUserName])) {
+            if (isset($ldapUsers[$gitlabUserName]) && is_array($ldapUsers[$gitlabUserName]) && [] !== $ldapUsers[$gitlabUserName]) {
                 // User exists in directory: Update
                 if ("ldap_blocked" === $gitlabUser["state"]) {
                     $this->logger?->warning(sprintf("Gitlab user #%d \"%s\" is LDAP blocked, can't update.", $gitlabUserId, $gitlabUserName));
@@ -1580,7 +1613,7 @@ class LdapSyncCommand extends Command
         $this->logger?->notice("Finding all existing Gitlab groups...");
         $p = 0;
 
-        while (is_array($gitlabGroups = $gitlab->groups()->all(["page" => ++$p, "per_page" => 100, "all_available" => true])) && !empty($gitlabGroups)) {
+        while (is_array($gitlabGroups = $gitlab->groups()->all(["page" => ++$p, "per_page" => 100, "all_available" => true])) && [] !== $gitlabGroups) {
             /** @var array<int, GitlabGroupArray> $gitlabGroups */
             foreach ($gitlabGroups as $i => $gitlabGroup) {
                 $n = $i + 1;
@@ -1616,12 +1649,12 @@ class LdapSyncCommand extends Command
                     continue;
                 }
 
-                if ($this->in_array_i($gitlabGroupName, static::getBuiltInGroups())) {
+                if ($this->in_array_i($gitlabGroupName, self::getBuiltInGroups())) {
                     $this->logger?->info(sprintf("Group \"%s\" in built-in ignore list.", $gitlabGroupName));
                     continue;
                 }
 
-                if ($this->in_array_i($gitlabGroupName, static::getReservedGroups())) {
+                if ($this->in_array_i($gitlabGroupName, self::getReservedGroups())) {
                     $this->logger?->warning(sprintf("Group \"%s\" in built-in reserved list.", $gitlabGroupName));
                     continue;
                 }
@@ -1642,12 +1675,12 @@ class LdapSyncCommand extends Command
         // Create directory groups of which don't exist in Gitlab
         $this->logger?->notice("Creating directory groups of which don't exist in Gitlab...");
         foreach ($ldapGroupsSafe as $ldapGroupName => $ldapGroupMembers) {
-            if ($this->in_array_i($ldapGroupName, static::getBuiltInGroups())) {
+            if ($this->in_array_i($ldapGroupName, self::getBuiltInGroups())) {
                 $this->logger?->info(sprintf("Group \"%s\" in built-in ignore list.", $ldapGroupName));
                 continue;
             }
 
-            if ($this->in_array_i($ldapGroupName, static::getReservedGroups())) {
+            if ($this->in_array_i($ldapGroupName, self::getReservedGroups())) {
                 $this->logger?->warning(sprintf("Group \"%s\" in built-in reserved list.", $ldapGroupName));
                 continue;
             }
@@ -1663,7 +1696,7 @@ class LdapSyncCommand extends Command
                 continue;
             }
 
-            if ((!is_array($ldapGroupMembers) || empty($ldapGroupMembers)) && !$config["gitlab"]["options"]["createEmptyGroups"]) {
+            if ((!is_array($ldapGroupMembers) || [] === $ldapGroupMembers) && !$config["gitlab"]["options"]["createEmptyGroups"]) {
                 $this->logger?->warning(sprintf("Not creating Gitlab group \"%s\" [%s]: No members in directory group, or config gitlab->options->createEmptyGroups is disabled.", $gitlabGroupName, $gitlabGroupPath));
                 continue;
             }
@@ -1686,12 +1719,12 @@ class LdapSyncCommand extends Command
         // Delete Gitlab groups of which don't exist in directory
         $this->logger?->notice("Deleting Gitlab groups of which don't exist in directory...");
         foreach ($groupsSync["found"] as $gitlabGroupId => $gitlabGroupName) {
-            if ($this->in_array_i($gitlabGroupName, static::getBuiltInGroups())) {
+            if ($this->in_array_i($gitlabGroupName, self::getBuiltInGroups())) {
                 $this->logger?->info(sprintf("Group \"%s\" in built-in ignore list.", $gitlabGroupName));
                 continue;
             }
 
-            if ($this->in_array_i($gitlabGroupName, static::getReservedGroups())) {
+            if ($this->in_array_i($gitlabGroupName, self::getReservedGroups())) {
                 $this->logger?->warning(sprintf("Group \"%s\" in built-in reserved list.", $gitlabGroupName));
                 continue;
             }
@@ -1707,7 +1740,7 @@ class LdapSyncCommand extends Command
             $ldapGroupMembers = $ldapGroupsSafe[$gitlabGroupName];
 
             $gitlabGroupPath = $slugifyGitlabPath->slugify($gitlabGroupName);
-            if ((is_array($ldapGroupMembers) && !empty($ldapGroupMembers)) || !$config["gitlab"]["options"]["deleteExtraGroups"]) {
+            if ((is_array($ldapGroupMembers) && [] !== $ldapGroupMembers) || !$config["gitlab"]["options"]["deleteExtraGroups"]) {
                 $this->logger?->info(sprintf("Not deleting Gitlab group #%d \"%s\" [%s]: Has members in directory group, or config gitlab->options->deleteExtraGroups is disabled.", $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                 continue;
             }
@@ -1739,16 +1772,19 @@ class LdapSyncCommand extends Command
         // Update groups of which were already in both Gitlab and the directory
         $this->logger?->notice("Updating groups of which were already in both Gitlab and the directory...");
         foreach ($groupsSync["found"] as $gitlabGroupId => $gitlabGroupName) {
-            if (!empty($groupsSync["new"][$gitlabGroupId]) || !empty($groupsSync["extra"][$gitlabGroupId])) {
+            if (
+                (isset($groupsSync["new"][$gitlabGroupId]) && "" !== $groupsSync["new"][$gitlabGroupId])
+                || (isset($groupsSync["extra"][$gitlabGroupId]) && "" !== $groupsSync["extra"][$gitlabGroupId])
+            ) {
                 continue;
             }
 
-            if ($this->in_array_i($gitlabGroupName, static::getBuiltInGroups())) {
+            if ($this->in_array_i($gitlabGroupName, self::getBuiltInGroups())) {
                 $this->logger?->info(sprintf("Group \"%s\" in built-in ignore list.", $gitlabGroupName));
                 continue;
             }
 
-            if ($this->in_array_i($gitlabGroupName, static::getReservedGroups())) {
+            if ($this->in_array_i($gitlabGroupName, self::getReservedGroups())) {
                 $this->logger?->warning(sprintf("Group \"%s\" in built-in reserved list.", $gitlabGroupName));
                 continue;
             }
@@ -1800,12 +1836,12 @@ class LdapSyncCommand extends Command
 
         $this->logger?->notice("Synchronising Gitlab group members with directory group members...");
         foreach ($groupsToSyncMembership as $gitlabGroupId => $gitlabGroupName) {
-            if ($this->in_array_i($gitlabGroupName, static::getBuiltInGroups())) {
+            if ($this->in_array_i($gitlabGroupName, self::getBuiltInGroups())) {
                 $this->logger?->info(sprintf("Group \"%s\" in built-in ignore list.", $gitlabGroupName));
                 continue;
             }
 
-            if ($this->in_array_i($gitlabGroupName, static::getReservedGroups())) {
+            if ($this->in_array_i($gitlabGroupName, self::getReservedGroups())) {
                 $this->logger?->warning(sprintf("Group \"%s\" in built-in reserved list.", $gitlabGroupName));
                 continue;
             }
@@ -1860,7 +1896,7 @@ class LdapSyncCommand extends Command
             $this->logger?->notice("Finding existing group members...");
             $p = 0;
 
-            while (is_array($gitlabUsers = $gitlab->groups()->members($gitlabGroupId, ["page" => ++$p, "per_page" => 100])) && !empty($gitlabUsers)) {
+            while (is_array($gitlabUsers = $gitlab->groups()->members($gitlabGroupId, ["page" => ++$p, "per_page" => 100])) && [] !== $gitlabUsers) {
                 /** @var array<int, GitlabUserArray> $gitlabUsers */
                 foreach ($gitlabUsers as $i => $gitlabUser) {
                     $n = $i + 1;
@@ -1946,6 +1982,11 @@ class LdapSyncCommand extends Command
                     continue;
                 }
 
+                if ($this->in_array_i($gitlabUserName, $config["gitlab"]["options"]["userNamesToIgnore"])) {
+                    $this->logger?->info(sprintf("User \"%s\" in ignore list.", $gitlabUserName));
+                    continue;
+                }
+
                 $this->logger?->info(sprintf("Deleting user #%d \"%s\" from group #%d \"%s\" [%s].", $gitlabUserId, $gitlabUserName, $gitlabGroupId, $gitlabGroupName, $gitlabGroupPath));
                 $gitlabGroupMember = null;
 
@@ -1997,8 +2038,10 @@ class LdapSyncCommand extends Command
 
     /**
      * Case-insensitive `in_array()`.
-     * @param  bool|int|float|string $needle
-     * @param  array<mixed>          $haystack
+     *
+     * @param bool|int|float|string $needle
+     * @param array<mixed>          $haystack
+     *
      * @return bool
      */
     private function in_array_i($needle, array $haystack): bool
@@ -2014,8 +2057,10 @@ class LdapSyncCommand extends Command
 
     /**
      * Case insensitive `array_key_exists()`.
-     * @param  bool|int|float|string $key
-     * @param  array<mixed>          $haystack
+     *
+     * @param bool|int|float|string $key
+     * @param array<mixed>          $haystack
+     *
      * @return bool
      */
     private function array_key_exists_i($key, array $haystack): bool
@@ -2035,8 +2080,10 @@ class LdapSyncCommand extends Command
 
     /**
      * Generate a random password.
-     * @param  int    $length Length
-     * @return string         Password
+     *
+     * @param int $length Length
+     *
+     * @return string Password
      */
     private function generateRandomPassword(int $length): string
     {
@@ -2056,6 +2103,7 @@ class LdapSyncCommand extends Command
 
     /**
      * Get a list of built-in user names, of which should be ignored by this application.
+     *
      * @return string[]
      */
     private static function getBuiltInUserNames(): array
@@ -2065,6 +2113,7 @@ class LdapSyncCommand extends Command
 
     /**
      * Get a list of built-in group names, of which should be ignored by this application.
+     *
      * @return string[]
      */
     private static function getBuiltInGroups(): array
@@ -2075,8 +2124,11 @@ class LdapSyncCommand extends Command
     /**
      * Get a list of reserved group names, of which must be ignored by this application.
      * (The list is different for root and sub groups.)
-     * @see    https://docs.gitlab.com/ee/user/reserved_names.html
-     * @param  bool     $isRootGroup Get the list
+     *
+     * @see https://docs.gitlab.com/ee/user/reserved_names.html
+     *
+     * @param bool $isRootGroup Get the list
+     *
      * @return string[]
      */
     private static function getReservedGroups(bool $isRootGroup = true): array
@@ -2129,6 +2181,7 @@ class LdapSyncCommand extends Command
 
     /**
      * Wait a bit of time between each Gitlab API request to avoid HTTP 500 errors when doing too many requests in a short time.
+     *
      * @return void
      */
     private function gitlabApiCoolDown(): void
