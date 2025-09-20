@@ -271,6 +271,7 @@ class LdapSyncCommand extends Command
             "ldap_search",
             "ldap_get_entries",
         ] as $ldapFunction) {
+            // @phpstan-ignore function.alreadyNarrowedType
             if (!function_exists($ldapFunction)) {
                 $this->logger->critical(sprintf("PHP-LDAP function \"%s\" does not exist.", $ldapFunction));
                 return Command::FAILURE;
