@@ -1744,7 +1744,7 @@ class LdapSyncCommand extends Command
                 continue;
             }
 
-            if ($this->array_key_exists_i($gitlabGroupName, $ldapGroupsSafe)) {
+            if (!$this->array_key_exists_i($gitlabGroupName, $ldapGroupsSafe)) {
                 continue;
             }
             $ldapGroupMembers = $ldapGroupsSafe[$gitlabGroupName];
