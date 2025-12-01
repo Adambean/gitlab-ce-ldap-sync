@@ -17,6 +17,8 @@ ldap:
     queries:
         baseDn:                         ''
 
+        objectUniqueIdAttribute:        ''
+
         userDn:                         ''
         userFilter:                     "(objectClass=inetOrgPerson)"
         userUniqueAttribute:            "uid"
