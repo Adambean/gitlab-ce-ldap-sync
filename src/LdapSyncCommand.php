@@ -1298,7 +1298,7 @@ class LdapSyncCommand extends Command
 
         $slugifyGitlabName = new Slugify([
             "regexp"        => "/([^A-Za-z0-9_\.\(\)\- ])+/",
-            "separator"     => " ",
+            "separator"     => "",
             "lowercase"     => false,
             "trim"          => true,
         ]);
