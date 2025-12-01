@@ -1355,7 +1355,16 @@ class LdapSyncCommand extends Command
         $this->logger?->notice("Finding all existing Gitlab users...");
         $p = 0;
 
-        while (is_array($gitlabUsers = $gitlab->users()->all(["page" => ++$p, "per_page" => 100, "without_project_bots" => true])) && [] !== $gitlabUsers) {
+        while (is_array($gitlabUsers = $gitlab->users()->all([
+            "page"                  => ++$p,
+            "per_page"              => 100,
+            /* Option not yet supported in the PHP GitLab API client component:
+            "without_project_bots"  => true,
+             * See:
+             * - https://github.com/Adambean/gitlab-ce-ldap-sync/issues/50
+             * - https://github.com/GitLabPHP/Client/issues/810
+             */
+        ])) && [] !== $gitlabUsers) {
             /** @var array<int, GitlabUserArray> $gitlabUsers */
             foreach ($gitlabUsers as $i => $gitlabUser) {
                 $n = $i + 1;
@@ -1735,7 +1744,7 @@ class LdapSyncCommand extends Command
                 continue;
             }
 
-            if ($this->array_key_exists_i($gitlabGroupName, $ldapGroupsSafe)) {
+            if (!$this->array_key_exists_i($gitlabGroupName, $ldapGroupsSafe)) {
                 continue;
             }
             $ldapGroupMembers = $ldapGroupsSafe[$gitlabGroupName];
