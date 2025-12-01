@@ -1,5 +1,5 @@
 FROM mlocati/php-extension-installer:latest AS installer
-FROM php:7.4.9-cli-alpine3.12
+FROM php:8.1.33-cli-alpine3.21
 
 COPY --from=installer /usr/bin/install-php-extensions /usr/bin/
 
