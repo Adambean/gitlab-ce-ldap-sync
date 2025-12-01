@@ -241,7 +241,7 @@ class LdapSyncCommand extends Command
      * @param InputInterface  $input  Input interface
      * @param OutputInterface $output Output interface
      *
-     * @return int Error code, or null/zero for success
+     * @return int Error code, or zero for success
      */
     public function execute(InputInterface $input, OutputInterface $output): int
     {
