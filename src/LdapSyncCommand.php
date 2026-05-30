@@ -1677,27 +1677,20 @@ class LdapSyncCommand extends Command
             /** @var GitLabUserArray|null $gitLabUser */
             $gitLabUser = null;
 
-            $gitLabUserPassword = $this->generateRandomPassword(12);
-            $this->logger?->debug(sprintf(
-                "Password for GitLab user \"%s\" [%s] will be: %s",
-                $gitLabUserName,
-                $ldapUserDn,
-                $gitLabUserPassword
-            ));
-
             try {
                 /** @var GitLabUserArray|null $gitLabUser */
-                !$this->dryRun ? ($gitLabUser = $gitLab->users()->create($ldapUserEmail, $gitLabUserPassword, [
-                    "username"          => $gitLabUserName,
-                    "reset_password"    => false,
-                    "name"              => $ldapUserDetails["fullName"],
-                    "extern_uid"        => $ldapUserDn,
-                    "provider"          => $gitLabConfig["ldapServerName"],
-                    "email"             => $ldapUserEmail,
-                    "admin"             => $ldapUserDetails["isAdmin"],
-                    "can_create_group"  => $ldapUserDetails["isAdmin"],
-                    "skip_confirmation" => true,
-                    "external"          => $ldapUserDetails["isExternal"],
+                !$this->dryRun ? ($gitLabUser = $gitLab->users()->create($ldapUserEmail, "", [
+                    "username"              => $gitLabUserName,
+                    "reset_password"        => false,
+                    "force_random_password" => true,
+                    "name"                  => $ldapUserDetails["fullName"],
+                    "extern_uid"            => $ldapUserDn,
+                    "provider"              => $gitLabConfig["ldapServerName"],
+                    "email"                 => $ldapUserEmail,
+                    "admin"                 => $ldapUserDetails["isAdmin"],
+                    "can_create_group"      => $ldapUserDetails["isAdmin"],
+                    "skip_confirmation"     => true,
+                    "external"              => $ldapUserDetails["isExternal"],
                 ])) : $this->logger?->warning("Operation skipped due to dry run.");
             } catch (\Exception $e) {
                 // Permit continue when user email address already used by another account
@@ -2544,29 +2537,6 @@ class LdapSyncCommand extends Command
         }
 
         return false;
-    }
-
-    /**
-     * Generate a random password.
-     *
-     * @param int $length Length
-     *
-     * @return string Password
-     */
-    private function generateRandomPassword(int $length): string
-    {
-        if ($length < 1) {
-            throw new \UnexpectedValueException("Length must be at least 1.");
-        }
-
-        $password   = "";
-        $chars      = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        $charsNum   = strlen($chars);
-        for ($i = 0; $i < $length; $i++) {
-            $password .= $chars[random_int(0, $charsNum - 1)];
-        }
-
-        return $password;
     }
 
     /**
