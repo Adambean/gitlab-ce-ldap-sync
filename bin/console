@@ -10,7 +10,7 @@ require_once __DIR__ . "/../vendor/autoload.php";
 
 use Symfony\Component\Console\Application;
 
-use AdamReece\GitlabCeLdapSync\LdapSyncCommand;
+use AdamReece\GitLabCeLdapSync\LdapSyncCommand;
 
 $app = new Application();
 $app->add(new LdapSyncCommand());
