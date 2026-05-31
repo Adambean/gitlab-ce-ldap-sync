@@ -58,6 +58,7 @@ use Symfony\Component\Yaml\Yaml;
  *          userNamesToIgnore: non-empty-string[],
  *          groupNamesToIgnoreRegex: bool,
  *          groupNamesToIgnore: non-empty-string[],
+ *          groupNamesPrefix: ?string,
  *          createEmptyGroups: bool,
  *          deleteExtraGroups: bool,
  *          newMemberAccessLevel: int,
@@ -772,6 +773,12 @@ class LdapSyncCommand extends Command
                     }
                 }
 
+                if (!isset($config["gitlab"]["options"]["groupNamesPrefix"])) {
+                    $config["gitlab"]["options"]["groupNamesPrefix"] = null;
+                } elseif ("" === ($config["gitlab"]["options"]["groupNamesPrefix"] = trim((string) $config["gitlab"]["options"]["groupNamesPrefix"]))) {
+                    $config["gitlab"]["options"]["groupNamesPrefix"] = null;
+                }
+
                 if (!isset($config["gitlab"]["options"]["createEmptyGroups"])) {
                     $addProblem("warning", "gitlab->options->createEmptyGroups missing. (Assuming false.)");
                     $config["gitlab"]["options"]["createEmptyGroups"] = false;
@@ -1199,7 +1206,7 @@ class LdapSyncCommand extends Command
                         continue;
                     }
 
-                    if ($this->in_array_combined($ldapUserName, $config["gitlab"]["options"]["userNamesToIgnore"], $config["gitlab"]["config"]["userNamesToIgnoreRegex"])) {
+                    if ($this->in_array_combined($ldapUserName, $config["gitlab"]["options"]["userNamesToIgnore"], $config["gitlab"]["options"]["userNamesToIgnoreRegex"])) {
                         $this->logger?->info(sprintf("User \"%s\" in ignore list.", $ldapUserName));
                         continue;
                     }
@@ -1308,7 +1315,7 @@ class LdapSyncCommand extends Command
                         continue;
                     }
 
-                    if ($this->in_array_combined($ldapGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"], $config["gitlab"]["config"]["groupNamesToIgnoreRegex"])) {
+                    if ($this->in_array_combined($ldapGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"], $config["gitlab"]["options"]["groupNamesToIgnoreRegex"])) {
                         $this->logger?->info(sprintf("Group \"%s\" in ignore list.", $ldapGroupName));
                         continue;
                     }
@@ -1550,9 +1557,20 @@ class LdapSyncCommand extends Command
         ]);
 
         // Convert LDAP group names into a format safe for GitLab's restrictions
+        // Removes prefix if groupNamesPrefix is defined. Skips groups without prefix.
         $ldapGroupsSafe = [];
         foreach ($ldapGroups as $ldapGroupName => $ldapGroupMembers) {
-            $ldapGroupsSafe[$slugifyGitLabName->slugify($ldapGroupName)] = $ldapGroupMembers;
+            $ldapGroupNameNoPrefix = $ldapGroupName;
+            if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
+                if(str_starts_with($ldapGroupNameNoPrefix, $config["gitlab"]["options"]["groupNamesPrefix"])) {
+                    $ldapGroupNameNoPrefix = substr($ldapGroupName, strlen($config["gitlab"]["options"]["groupNamesPrefix"]));
+                } else {
+                    $this->logger?->info(sprintf("Group \"%s\" does not begin with gitlab->options->groupNamesPrefix, ignoring for group creation and membership.", $ldapGroupName));
+                    continue;
+                }
+            }
+
+            $ldapGroupsSafe[$slugifyGitLabName->slugify($ldapGroupNameNoPrefix)] = $ldapGroupMembers;
         }
 
         // Connect
@@ -2011,8 +2029,13 @@ class LdapSyncCommand extends Command
                 continue;
             }
 
-            if ($this->in_array_combined($ldapGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"], $config["gitlab"]["options"]["groupNamesToIgnoreRegex"])) {
-                $this->logger?->info(sprintf("Group \"%s\" in ignore list.", $ldapGroupName));
+            $ldapGroupNameWithPrefix = $ldapGroupName;
+            if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
+                $ldapGroupNameWithPrefix = $config["gitlab"]["options"]["groupNamesPrefix"] . $ldapGroupNameWithPrefix;
+            }
+
+            if ($this->in_array_combined($ldapGroupNameWithPrefix, $config["gitlab"]["options"]["groupNamesToIgnore"], $config["gitlab"]["options"]["groupNamesToIgnoreRegex"])) {
+                $this->logger?->info(sprintf("Group \"%s\" in ignore list.", $ldapGroupNameWithPrefix));
                 continue;
             }
 
@@ -2071,8 +2094,13 @@ class LdapSyncCommand extends Command
                 continue;
             }
 
-            if ($this->in_array_combined($gitLabGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"], $config["gitlab"]["options"]["groupNamesToIgnoreRegex"])) {
-                $this->logger?->info(sprintf("Group \"%s\" in ignore list.", $gitLabGroupName));
+            $gitLabGroupNameWithPrefix = $gitLabGroupName;
+            if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
+                $gitLabGroupNameWithPrefix = $config["gitlab"]["options"]["groupNamesPrefix"] . $gitLabGroupNameWithPrefix;
+            }
+
+            if ($this->in_array_combined($gitLabGroupNameWithPrefix, $config["gitlab"]["options"]["groupNamesToIgnore"], $config["gitlab"]["options"]["groupNamesToIgnoreRegex"])) {
+                $this->logger?->info(sprintf("Group \"%s\" in ignore list.", $gitLabGroupNameWithPrefix));
                 continue;
             }
 
@@ -2168,8 +2196,13 @@ class LdapSyncCommand extends Command
                 continue;
             }
 
-            if ($this->in_array_combined($gitLabGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"], $config["gitlab"]["options"]["groupNamesToIgnoreRegex"])) {
-                $this->logger?->info(sprintf("Group \"%s\" in ignore list.", $gitLabGroupName));
+            $gitLabGroupNameWithPrefix = $gitLabGroupName;
+            if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
+                $gitLabGroupNameWithPrefix = $config["gitlab"]["options"]["groupNamesPrefix"] . $gitLabGroupNameWithPrefix;
+            }
+            
+            if ($this->in_array_combined($gitLabGroupNameWithPrefix, $config["gitlab"]["options"]["groupNamesToIgnore"], $config["gitlab"]["options"]["groupNamesToIgnoreRegex"])) {
+                $this->logger?->info(sprintf("Group \"%s\" in ignore list.", $gitLabGroupNameWithPrefix));
                 continue;
             }
 
@@ -2234,8 +2267,13 @@ class LdapSyncCommand extends Command
                 continue;
             }
 
-            if ($this->in_array_combined($gitLabGroupName, $config["gitlab"]["options"]["groupNamesToIgnore"], $config["gitlab"]["options"]["groupNamesToIgnoreRegex"])) {
-                $this->logger?->info(sprintf("Group \"%s\" in ignore list.", $gitLabGroupName));
+            $gitLabGroupNameWithPrefix = $gitLabGroupName;
+            if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
+                $gitLabGroupNameWithPrefix = $config["gitlab"]["options"]["groupNamesPrefix"] . $gitLabGroupNameWithPrefix;
+            }
+
+            if ($this->in_array_combined($gitLabGroupNameWithPrefix, $config["gitlab"]["options"]["groupNamesToIgnore"], $config["gitlab"]["options"]["groupNamesToIgnoreRegex"])) {
+                $this->logger?->info(sprintf("Group \"%s\" in ignore list.", $gitLabGroupNameWithPrefix));
                 continue;
             }
 
@@ -2333,8 +2371,13 @@ class LdapSyncCommand extends Command
                         continue;
                     }
 
-                    if ($this->in_array_combined($gitLabUserName, $config["gitlab"]["options"]["userNamesToIgnore"], $config["gitlab"]["options"]["userNamesToIgnoreRegex"])) {
-                        $this->logger?->info(sprintf("User \"%s\" in ignore list.", $gitLabUserName));
+                    $gitLabGroupNameWithPrefix = $gitLabGroupName;
+                    if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
+                        $gitLabGroupNameWithPrefix = $config["gitlab"]["options"]["groupNamesPrefix"] . $gitLabGroupNameWithPrefix;
+                    }
+
+                    if ($this->in_array_combined($gitLabGroupNameWithPrefix, $config["gitlab"]["options"]["userNamesToIgnore"], $config["gitlab"]["options"]["userNamesToIgnoreRegex"])) {
+                        $this->logger?->info(sprintf("User \"%s\" in ignore list.", $gitLabGroupNameWithPrefix));
                         continue;
                     }
 
@@ -2430,8 +2473,13 @@ class LdapSyncCommand extends Command
                     continue;
                 }
 
-                if ($this->in_array_combined($gitLabUserName, $config["gitlab"]["options"]["userNamesToIgnore"], $config["gitlab"]["options"]["userNamesToIgnoreRegex"])) {
-                    $this->logger?->info(sprintf("User \"%s\" in ignore list.", $gitLabUserName));
+                $gitLabGroupNameWithPrefix = $gitLabGroupName;
+                if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
+                    $gitLabGroupNameWithPrefix = $config["gitlab"]["options"]["groupNamesPrefix"] . $gitLabGroupNameWithPrefix;
+                }
+
+                if ($this->in_array_combined($gitLabGroupNameWithPrefix, $config["gitlab"]["options"]["userNamesToIgnore"], $config["gitlab"]["options"]["userNamesToIgnoreRegex"])) {
+                    $this->logger?->info(sprintf("User \"%s\" in ignore list.", $gitLabGroupNameWithPrefix));
                     continue;
                 }
 
