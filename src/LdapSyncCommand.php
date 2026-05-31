@@ -718,6 +718,12 @@ class LdapSyncCommand extends Command
             if (!isset($config["gitlab"]["options"]) || !is_array($config["gitlab"]["options"])) {
                 $addProblem("error", "gitlab->options missing.");
             } else {
+                if (!isset($config["gitlab"]["options"]["userNamesToIgnoreRegex"])) {
+                    $config["gitlab"]["options"]["userNamesToIgnoreRegex"] = false;
+                } elseif (!is_bool($config["gitlab"]["options"]["userNamesToIgnoreRegex"])) {
+                    $addProblem("error", "gitlab->options->userNamesToIgnoreRegex is not a boolean.");
+                }
+
                 if (!isset($config["gitlab"]["options"]["userNamesToIgnore"])) {
                     $addProblem("warning", "gitlab->options->userNamesToIgnore missing. (Assuming none.)");
                     $config["gitlab"]["options"]["userNamesToIgnore"] = [];
@@ -738,12 +744,17 @@ class LdapSyncCommand extends Command
                             continue;
                         }
 
-                        if($config["gitlab"]["options"]["userNamesToIgnoreRegex"] && @preg_match($userName, "") === false) {
+                        if ($config["gitlab"]["options"]["userNamesToIgnoreRegex"] && @preg_match($userName, "") === false) {
                             $addProblem("error", sprintf("gitlab->options->userNamesToIgnore[%d] is invalid regex.", $i));
                             continue;
                         }
-
                     }
+                }
+
+                if (!isset($config["gitlab"]["options"]["groupNamesToIgnoreRegex"])) {
+                    $config["gitlab"]["options"]["groupNamesToIgnoreRegex"] = false;
+                } elseif (!is_bool($config["gitlab"]["options"]["groupNamesToIgnoreRegex"])) {
+                    $addProblem("error", "gitlab->options->groupNamesToIgnoreRegex is not a boolean.");
                 }
 
                 if (!isset($config["gitlab"]["options"]["groupNamesToIgnore"])) {
@@ -766,7 +777,7 @@ class LdapSyncCommand extends Command
                             continue;
                         }
 
-                        if($config["gitlab"]["options"]["groupNamesToIgnoreRegex"] && @preg_match($groupName, "") === false) {
+                        if ($config["gitlab"]["options"]["groupNamesToIgnoreRegex"] && @preg_match($groupName, "") === false) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesToIgnore[%d] is invalid regex.", $i));
                             continue;
                         }
@@ -809,6 +820,12 @@ class LdapSyncCommand extends Command
                     $addProblem("error", "gitlab->options->newMemberAccessLevel is not an integer.");
                 }
 
+                if (!isset($config["gitlab"]["options"]["groupNamesOfAdministratorsRegex"])) {
+                    $config["gitlab"]["options"]["groupNamesOfAdministratorsRegex"] = false;
+                } elseif (!is_bool($config["gitlab"]["options"]["groupNamesOfAdministratorsRegex"])) {
+                    $addProblem("error", "gitlab->options->groupNamesOfAdministratorsRegex is not a boolean.");
+                }
+
                 if (!isset($config["gitlab"]["options"]["groupNamesOfAdministrators"])) {
                     // $addProblem("warning", "gitlab->options->groupNamesOfAdministrators missing. (Assuming none.)");
                     $config["gitlab"]["options"]["groupNamesOfAdministrators"] = [];
@@ -829,11 +846,17 @@ class LdapSyncCommand extends Command
                             continue;
                         }
 
-                        if($config["gitlab"]["options"]["groupNamesOfAdministratorsRegex"] && @preg_match($groupName, "") === false) {
+                        if ($config["gitlab"]["options"]["groupNamesOfAdministratorsRegex"] && @preg_match($groupName, "") === false) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesOfAdministrators[%d] is invalid regex.", $i));
                             continue;
                         }
                     }
+                }
+
+                if (!isset($config["gitlab"]["options"]["groupNamesOfExternalRegex"])) {
+                    $config["gitlab"]["options"]["groupNamesOfExternalRegex"] = false;
+                } elseif (!is_bool($config["gitlab"]["options"]["groupNamesOfExternalRegex"])) {
+                    $addProblem("error", "gitlab->options->groupNamesOfExternalRegex is not a boolean.");
                 }
 
                 if (!isset($config["gitlab"]["options"]["groupNamesOfExternal"])) {
@@ -856,7 +879,7 @@ class LdapSyncCommand extends Command
                             continue;
                         }
 
-                        if($config["gitlab"]["options"]["groupNamesOfExternalRegex"] && @preg_match($groupName, "") === false) {
+                        if ($config["gitlab"]["options"]["groupNamesOfExternalRegex"] && @preg_match($groupName, "") === false) {
                             $addProblem("error", sprintf("gitlab->options->groupNamesOfExternal[%d] is invalid regex.", $i));
                             continue;
                         }
@@ -1561,8 +1584,8 @@ class LdapSyncCommand extends Command
         $ldapGroupsSafe = [];
         foreach ($ldapGroups as $ldapGroupName => $ldapGroupMembers) {
             $ldapGroupNameNoPrefix = $ldapGroupName;
-            if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
-                if(str_starts_with($ldapGroupNameNoPrefix, $config["gitlab"]["options"]["groupNamesPrefix"])) {
+            if ($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
+                if (str_starts_with($ldapGroupNameNoPrefix, $config["gitlab"]["options"]["groupNamesPrefix"])) {
                     $ldapGroupNameNoPrefix = substr($ldapGroupName, strlen($config["gitlab"]["options"]["groupNamesPrefix"]));
                 } else {
                     $this->logger?->info(sprintf("Group \"%s\" does not begin with gitlab->options->groupNamesPrefix, ignoring for group creation and membership.", $ldapGroupName));
@@ -2030,7 +2053,7 @@ class LdapSyncCommand extends Command
             }
 
             $ldapGroupNameWithPrefix = $ldapGroupName;
-            if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
+            if ($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
                 $ldapGroupNameWithPrefix = $config["gitlab"]["options"]["groupNamesPrefix"] . $ldapGroupNameWithPrefix;
             }
 
@@ -2095,7 +2118,7 @@ class LdapSyncCommand extends Command
             }
 
             $gitLabGroupNameWithPrefix = $gitLabGroupName;
-            if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
+            if ($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
                 $gitLabGroupNameWithPrefix = $config["gitlab"]["options"]["groupNamesPrefix"] . $gitLabGroupNameWithPrefix;
             }
 
@@ -2197,7 +2220,7 @@ class LdapSyncCommand extends Command
             }
 
             $gitLabGroupNameWithPrefix = $gitLabGroupName;
-            if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
+            if ($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
                 $gitLabGroupNameWithPrefix = $config["gitlab"]["options"]["groupNamesPrefix"] . $gitLabGroupNameWithPrefix;
             }
             
@@ -2268,7 +2291,7 @@ class LdapSyncCommand extends Command
             }
 
             $gitLabGroupNameWithPrefix = $gitLabGroupName;
-            if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
+            if ($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
                 $gitLabGroupNameWithPrefix = $config["gitlab"]["options"]["groupNamesPrefix"] . $gitLabGroupNameWithPrefix;
             }
 
@@ -2371,13 +2394,8 @@ class LdapSyncCommand extends Command
                         continue;
                     }
 
-                    $gitLabGroupNameWithPrefix = $gitLabGroupName;
-                    if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
-                        $gitLabGroupNameWithPrefix = $config["gitlab"]["options"]["groupNamesPrefix"] . $gitLabGroupNameWithPrefix;
-                    }
-
-                    if ($this->in_array_combined($gitLabGroupNameWithPrefix, $config["gitlab"]["options"]["userNamesToIgnore"], $config["gitlab"]["options"]["userNamesToIgnoreRegex"])) {
-                        $this->logger?->info(sprintf("User \"%s\" in ignore list.", $gitLabGroupNameWithPrefix));
+                    if ($this->in_array_combined($gitLabUserName, $config["gitlab"]["options"]["userNamesToIgnore"], $config["gitlab"]["options"]["userNamesToIgnoreRegex"])) {
+                        $this->logger?->info(sprintf("User \"%s\" in ignore list.", $gitLabUserName));
                         continue;
                     }
 
@@ -2473,12 +2491,7 @@ class LdapSyncCommand extends Command
                     continue;
                 }
 
-                $gitLabGroupNameWithPrefix = $gitLabGroupName;
-                if($config["gitlab"]["options"]["groupNamesPrefix"] !== null) {
-                    $gitLabGroupNameWithPrefix = $config["gitlab"]["options"]["groupNamesPrefix"] . $gitLabGroupNameWithPrefix;
-                }
-
-                if ($this->in_array_combined($gitLabGroupNameWithPrefix, $config["gitlab"]["options"]["userNamesToIgnore"], $config["gitlab"]["options"]["userNamesToIgnoreRegex"])) {
+                if ($this->in_array_combined($gitLabUserName, $config["gitlab"]["options"]["userNamesToIgnore"], $config["gitlab"]["options"]["userNamesToIgnoreRegex"])) {
                     $this->logger?->info(sprintf("User \"%s\" in ignore list.", $gitLabGroupNameWithPrefix));
                     continue;
                 }
@@ -2602,12 +2615,12 @@ class LdapSyncCommand extends Command
      */
     private function in_array_regex($needle, array $haystack): bool
     {
-        if ("" === $needle) {
+        if ("" === ($needle = strval($needle))) {
             throw new \UnexpectedValueException("Needle not specified.");
         }
 
         foreach ($haystack as $p) {
-            if(@preg_match($p, $needle) === 1) {
+            if (@preg_match($p, $needle) === 1) {
                 return true;
             }
         }

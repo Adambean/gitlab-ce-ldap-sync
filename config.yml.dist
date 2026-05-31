@@ -38,6 +38,8 @@ gitlab:
         groupNamesToIgnoreRegex:            false
         groupNamesToIgnore:                 []
 
+        groupNamesPrefix:                   ''
+
         createEmptyGroups:                  false
         deleteExtraGroups:                  false
         newMemberAccessLevel:               30

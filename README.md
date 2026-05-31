@@ -286,7 +286,7 @@ Group names "Root" and "Users" will always be ignored because they are built-in 
 
 Default: *null*
 
-##### groupNamesPrefix *(bool|null)*
+##### groupNamesPrefix *(string|null)*
 
 Specify a prefix for GitLab-related LDAP groups. This prefix will be omitted in the resulting GitLab groups. LDAP groups that do not start with this prefix will not be created in GitLab, but they will still be considered for [`groupNamesOfAdministrators`](#groupnamesofadministrators-arraynull) and [`groupNamesOfExternal`](#groupnamesofexternalregex-bool).
 
