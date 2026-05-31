@@ -224,9 +224,14 @@ This section configures how to communicate with your GitLab-CE/EE instance.
 
 #### options
 
-##### userNamesToIgnoreRegex *bool*
+##### userNamesToIgnoreRegex *(bool|null)*
 
-Specify whether `userNamesToIgnore` should use regex.
+Specify whether [`userNamesToIgnore`](#usernamestoignore-arraynull) should use regex for matching. If enabled, values in `userNamesToIgnore` must be strings containing a valid [PCRE](https://www.php.net/manual/en/book.pcre.php) regular expression.
+
+Example:
+```
+"/.*/i"
+```
 
 ##### userNamesToIgnore *(array|null)*
 
@@ -250,9 +255,14 @@ User name "root" will always be ignored because this is the built-in GitLab root
 
 Default: *null*
 
-##### groupNamesToIgnoreRegex *bool*
+##### groupNamesToIgnoreRegex *(bool|null)*
 
-Specify whether `groupNamesToIgnore` should use regex.
+Specify whether [`groupNamesToIgnore`](#groupnamestoignore-arraynull) should use regex for matching. If enabled, values in `groupNamesToIgnore` must be strings containing a valid [PCRE](https://www.php.net/manual/en/book.pcre.php) regular expression.
+
+Example:
+```
+"/.*/i"
+```
 
 ##### groupNamesToIgnore *(array|null)*
 
@@ -278,9 +288,9 @@ Default: *null*
 
 ##### groupNamesPrefix *(bool|null)*
 
-Specify a prefix for GitLab-related LDAP groups. This prefix will be omitted in the resulting GitLab groups. LDAP groups that do not start with this prefix will not be created in GitLab, but they will still be considered for [groupNamesOfAdministrators](#groupnamesofadministrators-arraynull) and [groupNamesOfExternal](#groupnamesofexternalregex-bool).
+Specify a prefix for GitLab-related LDAP groups. This prefix will be omitted in the resulting GitLab groups. LDAP groups that do not start with this prefix will not be created in GitLab, but they will still be considered for [`groupNamesOfAdministrators`](#groupnamesofadministrators-arraynull) and [`groupNamesOfExternal`](#groupnamesofexternalregex-bool).
 
-For example, if you have an LDAP group `git-project`, and your `groupNamesPrefix` is `git-`, LDAP members of `git-project` will be added to the GitLab group `project`. If you have the LDAP group `admins`, and `groupNamesOfAdministrators` includes `admins`, users in `admins` will be given administrator, but `admins` will not map to a GitLab group since it does not start with the prefix.
+For example, if you have an LDAP group `git-group1`, and your `groupNamesPrefix` is `git-`, LDAP members of `git-group1` will be added to the GitLab group `group1`. If you have the LDAP group `admins`, and `groupNamesOfAdministrators` includes `admins`, users in `admins` will be given administrator, but `admins` will not map to a GitLab group since it does not start with the prefix.
 
 Default: *null*
 
@@ -316,9 +326,14 @@ This will not interfere with existing group members, so you can adjust user perm
 
 Default: 30
 
-##### groupNamesOfAdministratorsRegex *bool*
+##### groupNamesOfAdministratorsRegex *(bool|null)*
 
-Specify whether `groupNamesOfAdministrators` should use regex.
+Specify whether [`groupNamesOfAdministrators`](#groupnamesofadministrators-arraynull) should use regex for matching. If enabled, values in `groupNamesOfAdministrators` must be strings containing a valid [PCRE](https://www.php.net/manual/en/book.pcre.php) regular expression.
+
+Example:
+```
+"/.*/i"
+```
 
 ##### groupNamesOfAdministrators *(array|null)*
 
@@ -341,7 +356,12 @@ Default: *null*
 
 ##### groupNamesOfExternalRegex *bool*
 
-Specify whether `groupNamesOfExternal` should use regex.
+Specify whether [`groupNamesOfExternal`](#groupnamesofexternal-arraynull) should use regex for matching. If enabled, values in `groupNamesOfExternal` must be strings containing a valid [PCRE](https://www.php.net/manual/en/book.pcre.php) regular expression.
+
+Example:
+```
+"/.*/i"
+```
 
 ##### groupNamesOfExternal *(array|null)*
 
