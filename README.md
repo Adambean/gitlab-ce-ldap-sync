@@ -42,7 +42,7 @@ Requirements for running this tool from a management station:
 * [PHP's LDAP functions](http://php.net/manual/en/book.ldap.php): Usually installed with PHP as standard, but the LDAP module/functions may not be enabled by default.
 * [Composer](https://getcomposer.org/): Available to most Linux distributions via `apt-get` or `yum`/`dnf`, or manually download it as `composer.phar` alongside this tool.
 * LDAP instance: Used for GitLab's authentication. It can (likely) be Microsoft Active Directory, OpenLDAP, 389-DS (including FreeIPA), and any other LDAP system, though **most of my testing is with 389-DS (without FreeIPA)**.
-* [GitLab community edition](https://about.gitlab.com/install/?version=ce) or [GitLab community edition](https://about.gitlab.com/install/?version=ee) self-hosted: This must be configured to authenticate against an LDAP instance already.
+* [GitLab community edition](https://about.gitlab.com/install/?version=ce) or [GitLab enterprise edition](https://about.gitlab.com/install/?version=ee) self-hosted: This must be configured to authenticate against an LDAP instance already.
 
 ## Installing
 
@@ -111,7 +111,7 @@ If your LDAP server does not allow anonymous access (which is a sensible restric
 
 For example: "uid=Administrator,ou=People,dc=example,dc=com"
 
-##### bindPw *(string|null)*
+##### bindPassword *(string|null)*
 
 If your LDAP server does not allow anonymous access (which is a sensible restriction) specify the password to go with the bind distinguished name.
 
