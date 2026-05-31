@@ -224,6 +224,10 @@ This section configures how to communicate with your GitLab-CE/EE instance.
 
 #### options
 
+##### userNamesToIgnoreRegex *bool*
+
+Specify whether `userNamesToIgnore` should use regex.
+
 ##### userNamesToIgnore *(array|null)*
 
 Specify a list of user names of which this tool should ignore. (Case-insensitive.)
@@ -245,6 +249,10 @@ userNamesToIgnore:
 User name "root" will always be ignored because this is the built-in GitLab root user. This tool will not attempt to create/delete/sync this user name.
 
 Default: *null*
+
+##### groupNamesToIgnoreRegex *bool*
+
+Specify whether `groupNamesToIgnore` should use regex.
 
 ##### groupNamesToIgnore *(array|null)*
 
@@ -300,6 +308,10 @@ This will not interfere with existing group members, so you can adjust user perm
 
 Default: 30
 
+##### groupNamesOfAdministratorsRegex *bool*
+
+Specify whether `groupNamesOfAdministrators` should use regex.
+
 ##### groupNamesOfAdministrators *(array|null)*
 
 Specify a list of group names of which members should be granted administrator access.
@@ -318,6 +330,10 @@ groupNamesOfAdministrators:
 ```
 
 Default: *null*
+
+##### groupNamesOfExternalRegex *bool*
+
+Specify whether `groupNamesOfExternal` should use regex.
 
 ##### groupNamesOfExternal *(array|null)*
 
