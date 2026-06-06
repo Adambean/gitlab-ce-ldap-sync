@@ -14,22 +14,22 @@
         "m4tthumphrey/php-gitlab-api": "^12.1.0",
         "monolog/monolog": "^3.10.0",
         "php-http/guzzle6-adapter": "^2.0.2",
-        "symfony/console": "^6.4.39",
+        "symfony/console": "^6.4.41",
         "symfony/polyfill-php82": "^1.37.0",
-        "symfony/polyfill-php83": "^1.37.0",
-        "symfony/polyfill-php84": "^1.37.0",
+        "symfony/polyfill-php83": "^1.38.1",
+        "symfony/polyfill-php84": "^1.38.1",
         "symfony/polyfill-php85": "^1.37.0",
-        "symfony/yaml": "^6.4.38"
+        "symfony/yaml": "^6.4.41"
     },
     "require-dev": {
-        "phpstan/phpstan": "^2.1.54",
+        "phpstan/phpstan": "^2.2.2",
         "phpstan/phpstan-deprecation-rules": "^2.0.4",
         "phpstan/phpstan-strict-rules": "^2.0.11",
-        "phpstan/phpstan-symfony": "^2.0.17"
+        "phpstan/phpstan-symfony": "^2.0.19"
     },
     "autoload": {
         "psr-4": {
-            "AdamReece\\GitLabCeLdapGroupSync\\": "src"
+            "AdamReece\\GitLabCeLdapSync\\": "src"
         },
         "classmap": ["src"]
     },
