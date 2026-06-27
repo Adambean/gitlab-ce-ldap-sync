@@ -6,7 +6,15 @@
 	],
 	"settings": {
 		"files.eol": "\n",
-		"files.trimTrailingWhitespace": true
+		"files.trimTrailingWhitespace": true,
+		"cSpell.words": [
+			"Adambean",
+			"Cocur",
+			"extern",
+			"Slugified",
+			"STARTTLS",
+			"USECONDS"
+		]
 	},
 	"extensions": {
 		"recommendations": [
