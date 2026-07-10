@@ -6,42 +6,49 @@ ldap:
     winCompatibilityMode:   false
 
     server:
-        host:                           ~
-        port:                           ~
-        version:                        3
-        encryption:                     ~
+        host:                               ~
+        port:                               ~
+        version:                            3
+        encryption:                         ~
 
-        bindDn:                         ~
-        bindPassword:                   ~
+        bindDn:                             ~
+        bindPassword:                       ~
 
     queries:
-        baseDn:                         ''
+        baseDn:                             ''
 
-        userDn:                         ''
-        userFilter:                     "(objectClass=inetOrgPerson)"
-        userUniqueAttribute:            "uid"
-        userMatchAttribute:             "uid"
-        userNameAttribute:              "cn"
-        userEmailAttribute:             "mail"
+        userDn:                             ''
+        userFilter:                         "(objectClass=inetOrgPerson)"
+        userUniqueAttribute:                "uid"
+        userMatchAttribute:                 "uid"
+        userNameAttribute:                  "cn"
+        userEmailAttribute:                 "mail"
 
-        groupDn:                        ''
-        groupFilter:                    "(objectClass=groupOfUniqueNames)"
-        groupUniqueAttribute:           "cn"
-        groupMemberAttribute:           "memberUid"
+        groupDn:                            ''
+        groupFilter:                        "(objectClass=groupOfUniqueNames)"
+        groupUniqueAttribute:               "cn"
+        groupMemberAttribute:               "memberUid"
 
 gitlab:
     debug: false
 
     options:
-        userNamesToIgnore:              []
-        groupNamesToIgnore:             []
+        userNamesToIgnoreRegex:             false
+        userNamesToIgnore:                  []
+        groupNamesToIgnoreRegex:            false
+        groupNamesToIgnore:                 []
 
-        createEmptyGroups:              false
-        deleteExtraGroups:              false
-        newMemberAccessLevel:           30
+        groupNamesPrefix:                   ''
 
-        groupNamesOfAdministrators:     []
-        groupNamesOfExternal:           []
+        createEmptyGroups:                  false
+        deleteExtraGroups:                  false
+        newMemberAccessLevel:               30
+
+
+        groupNamesOfAdministratorsRegex:    false
+        groupNamesOfAdministrators:         []
+        groupNamesOfExternalRegex:          false
+        groupNamesOfExternal:               []
 
     instances:
         example:

@@ -42,7 +42,7 @@ Requirements for running this tool from a management station:
 * [PHP's LDAP functions](http://php.net/manual/en/book.ldap.php): Usually installed with PHP as standard, but the LDAP module/functions may not be enabled by default.
 * [Composer](https://getcomposer.org/): Available to most Linux distributions via `apt-get` or `yum`/`dnf`, or manually download it as `composer.phar` alongside this tool.
 * LDAP instance: Used for GitLab's authentication. It can (likely) be Microsoft Active Directory, OpenLDAP, 389-DS (including FreeIPA), and any other LDAP system, though **most of my testing is with 389-DS (without FreeIPA)**.
-* [GitLab community edition](https://about.gitlab.com/install/?version=ce) or [GitLab community edition](https://about.gitlab.com/install/?version=ee) self-hosted: This must be configured to authenticate against an LDAP instance already.
+* [GitLab community edition](https://about.gitlab.com/install/?version=ce) or [GitLab enterprise edition](https://about.gitlab.com/install/?version=ee) self-hosted: This must be configured to authenticate against an LDAP instance already.
 
 ## Installing
 
@@ -111,7 +111,7 @@ If your LDAP server does not allow anonymous access (which is a sensible restric
 
 For example: "uid=Administrator,ou=People,dc=example,dc=com"
 
-##### bindPw *(string|null)*
+##### bindPassword *(string|null)*
 
 If your LDAP server does not allow anonymous access (which is a sensible restriction) specify the password to go with the bind distinguished name.
 
@@ -224,6 +224,15 @@ This section configures how to communicate with your GitLab-CE/EE instance.
 
 #### options
 
+##### userNamesToIgnoreRegex *(bool|null)*
+
+Specify whether [`userNamesToIgnore`](#usernamestoignore-arraynull) should use regex for matching. If enabled, values in `userNamesToIgnore` must be strings containing a valid [PCRE](https://www.php.net/manual/en/book.pcre.php) regular expression.
+
+Example:
+```
+"/.*/i"
+```
+
 ##### userNamesToIgnore *(array|null)*
 
 Specify a list of user names of which this tool should ignore. (Case-insensitive.)
@@ -246,6 +255,15 @@ User name "root" will always be ignored because this is the built-in GitLab root
 
 Default: *null*
 
+##### groupNamesToIgnoreRegex *(bool|null)*
+
+Specify whether [`groupNamesToIgnore`](#groupnamestoignore-arraynull) should use regex for matching. If enabled, values in `groupNamesToIgnore` must be strings containing a valid [PCRE](https://www.php.net/manual/en/book.pcre.php) regular expression.
+
+Example:
+```
+"/.*/i"
+```
+
 ##### groupNamesToIgnore *(array|null)*
 
 Specify a list of group names of which this tool should ignore. (Case-insensitive.)
@@ -265,6 +283,14 @@ groupNamesToIgnore:
 ```
 
 Group names "Root" and "Users" will always be ignored because they are built-in GitLab groups. This will will not attempt to create/delete/sync these group names.
+
+Default: *null*
+
+##### groupNamesPrefix *(string|null)*
+
+Specify a prefix for GitLab-related LDAP groups. This prefix will be omitted in the resulting GitLab groups. LDAP groups that do not start with this prefix will not be created in GitLab, but they will still be considered for [`groupNamesOfAdministrators`](#groupnamesofadministrators-arraynull) and [`groupNamesOfExternal`](#groupnamesofexternalregex-bool).
+
+For example, if you have an LDAP group `git-group1`, and your `groupNamesPrefix` is `git-`, LDAP members of `git-group1` will be added to the GitLab group `group1`. If you have the LDAP group `admins`, and `groupNamesOfAdministrators` includes `admins`, users in `admins` will be given administrator, but `admins` will not map to a GitLab group since it does not start with the prefix.
 
 Default: *null*
 
@@ -300,6 +326,15 @@ This will not interfere with existing group members, so you can adjust user perm
 
 Default: 30
 
+##### groupNamesOfAdministratorsRegex *(bool|null)*
+
+Specify whether [`groupNamesOfAdministrators`](#groupnamesofadministrators-arraynull) should use regex for matching. If enabled, values in `groupNamesOfAdministrators` must be strings containing a valid [PCRE](https://www.php.net/manual/en/book.pcre.php) regular expression.
+
+Example:
+```
+"/.*/i"
+```
+
 ##### groupNamesOfAdministrators *(array|null)*
 
 Specify a list of group names of which members should be granted administrator access.
@@ -318,6 +353,15 @@ groupNamesOfAdministrators:
 ```
 
 Default: *null*
+
+##### groupNamesOfExternalRegex *bool*
+
+Specify whether [`groupNamesOfExternal`](#groupnamesofexternal-arraynull) should use regex for matching. If enabled, values in `groupNamesOfExternal` must be strings containing a valid [PCRE](https://www.php.net/manual/en/book.pcre.php) regular expression.
+
+Example:
+```
+"/.*/i"
+```
 
 ##### groupNamesOfExternal *(array|null)*
 
